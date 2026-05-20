@@ -9,6 +9,7 @@ mkdir -p storage/framework/cache storage/framework/sessions storage/framework/vi
 chmod -R ug+rwX storage bootstrap/cache
 
 php artisan migrate --force
+php artisan db:seed --force
 
 php-fpm -D
 nginx -g "daemon off;"

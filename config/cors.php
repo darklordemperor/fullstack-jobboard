@@ -6,11 +6,11 @@ return [
 
     'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 
-    'allowed_origins' => [env('FRONTEND_URL', 'http://localhost:3000')],
+    'allowed_origins' => ['http://localhost:3000'],
 
     'allowed_origins_patterns' => [],
 
-    'allowed_headers' => ['Content-Type', 'X-CSRF-TOKEN', 'X-XSRF-TOKEN', 'Accept'],
+    'allowed_headers' => ['*'],
 
     'exposed_headers' => [],
 

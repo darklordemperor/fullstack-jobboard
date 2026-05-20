@@ -1,18 +1,18 @@
-FROM php:8.3-fpm
+FROM php:8.4-fpm
 
 WORKDIR /var/www/html
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        git \
-        nginx \
-        unzip \
-        libzip-dev \
+    git \
+    nginx \
+    unzip \
+    libzip-dev \
     && docker-php-ext-install \
-        bcmath \
-        pcntl \
-        pdo_mysql \
-        zip \
+    bcmath \
+    pcntl \
+    pdo_mysql \
+    zip \
     && pecl install redis \
     && docker-php-ext-enable redis \
     && rm -rf /var/lib/apt/lists/*
@@ -23,6 +23,6 @@ COPY docker/laravel/start-container.sh /usr/local/bin/start-container
 
 RUN chmod +x /usr/local/bin/start-container
 
-EXPOSE 8000
+EXPOSE 80
 
 CMD ["start-container"]

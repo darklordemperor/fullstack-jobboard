@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "8000:80"
     volumes:
       - .:/var/www/html
     env_file:
@@ -21,17 +21,18 @@ services:
 
   nextjs-app:
     build:
-      context: ../nextjsproject
+      context: C:\nextjsproject
       dockerfile: Dockerfile
     command: npm run dev -- --hostname 0.0.0.0
     ports:
       - "3000:3000"
     volumes:
-      - ../nextjsproject:/app
-      - nextjs-node-modules:/app/node_modules
-      - nextjs-cache:/app/.next
-    env_file:
-      - ../nextjsproject/.env.docker
+      - C:\nextjsproject:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NEXT_PUBLIC_API_URL=
+      - NEXT_INTERNAL_API_URL=http://laravel-api:80
     depends_on:
       - laravel-api
     networks:
@@ -80,5 +81,3 @@ networks:
 volumes:
   mysql-data:
   redis-data:
-  nextjs-node-modules:
-  nextjs-cache:

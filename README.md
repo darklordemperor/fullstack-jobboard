@@ -1,325 +1,262 @@
-<div align="center">
+# JobBoard Backend API
 
-# 🧑‍💼 JobBoard — Full Stack Job Platform
+Laravel backend API for a job board application. This repository contains the API, authentication, database migrations, seeders, Docker setup, and tests. The Next.js frontend is a separate project and should live outside this repository, for example at `C:\nextjsproject`.
 
-[![Laravel](https://img.shields.io/badge/Laravel-13-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)](https://laravel.com)
-[![Next.js](https://img.shields.io/badge/Next.js-15-000000?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
-[![PHP](https://img.shields.io/badge/PHP-8.3-777BB4?style=for-the-badge&logo=php&logoColor=white)](https://php.net)
-[![MySQL](https://img.shields.io/badge/MySQL-8-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://www.mysql.com)
-[![Redis](https://img.shields.io/badge/Redis-7-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io)
-[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
+## Current Scope
 
-**A production-ready full-stack job board application built to demonstrate professional API design, SPA authentication, and modern frontend architecture.**
+This checkout is the Laravel backend project. It currently includes:
 
-[Features](#-features) • [Architecture](#-architecture) • [Tech Stack](#-tech-stack) • [Getting Started](#-getting-started) • [API Docs](#-api-documentation) • [Screenshots](#-screenshots)
+- Laravel 13 API application
+- Sanctum session authentication for SPA clients
+- Role field on users: `admin`, `employer`, `jobseeker`
+- Consistent JSON response envelope
+- CORS configured for `http://localhost:3000`
+- Docker Compose services for Laravel, MySQL, Redis, Mailpit, and an external Next.js app path
+- Pest feature tests for authentication, API envelope behavior, and CORS
 
-</div>
+Frontend routes such as `src/app/(dashboard)/admin/dashboard/page.tsx`, `src/app/(dashboard)/employer/jobs/page.tsx`, and `src/app/(dashboard)/jobseeker/browse/page.tsx` belong in the separate Next.js project, not in this Laravel `app/` directory.
 
----
+## Tech Stack
 
-## 📌 Project Overview
+| Area | Technology |
+| --- | --- |
+| Backend | Laravel 13 |
+| PHP | PHP 8.3+ |
+| Auth | Laravel Sanctum |
+| Roles | User `role` column plus Spatie Permission package installed |
+| Tests | Pest 4 |
+| Formatting | Laravel Pint |
+| Database | MySQL 8 |
+| Cache/Queue | Redis |
+| Local mail | Mailpit |
+| Containers | Docker Compose |
 
-JobBoard is a full-stack application where **Employers** can post job listings and **Job Seekers** can browse and apply. It is built to showcase real-world backend and frontend skills including REST API design, SPA cookie authentication, role-based access control, file uploads, queued email notifications, and Docker-based local development.
+## Project Structure
 
-> **Purpose:** This project serves as a portfolio demonstration of my skills in Laravel 13 backend API development and Next.js 15 frontend development — covering authentication, authorization, clean architecture, and developer tooling.
-
----
-
-## ✨ Features
-
-### 👤 Authentication & Authorization
-
-- [x] Cookie-based SPA authentication via Laravel Sanctum
-- [x] Role-based access control (Admin / Employer / Job Seeker)
-- [x] Protected routes on both frontend and backend
-- [x] CSRF protection for all state-changing requests
-
-### 🏢 Employer Features
-
-- [x] Create, edit, and delete job listings
-- [x] View all applicants per job
-- [x] Download applicant resumes (signed URLs)
-- [x] Email notification when someone applies (queued)
-
-### 🔍 Job Seeker Features
-
-- [x] Browse and filter jobs (category, location, type)
-- [x] Apply to jobs with resume upload (PDF, max 2MB)
-- [x] View application history and status
-- [x] One application per job enforcement
-
-### 🛠️ Admin Features
-
-- [x] Manage all users and listings
-- [x] Dashboard with stats (jobs, applications, users)
-
-### ⚙️ Technical Highlights
-
-- [x] Consistent JSON response structure across all endpoints
-- [x] Global exception handling (401, 403, 422, 500)
-- [x] Redis caching for job listings
-- [x] Queue worker for email notifications (Mailpit in dev)
-- [x] Swagger/OpenAPI documentation
-- [x] Docker Compose for one-command local setup
-
----
-
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        Docker Network                        │
-│                                                             │
-│  ┌──────────────────┐         ┌──────────────────────────┐  │
-│  │   Next.js 15     │◄──────► │     Laravel 13 API       │  │
-│  │   :3000          │  HTTP   │     :8000                │  │
-│  │                  │  + SPA  │                          │  │
-│  │  App Router      │  Cookie │  REST API /api/v1/       │  │
-│  │  TypeScript      │  Auth   │  Sanctum SPA Auth        │  │
-│  │  Zustand         │         │  Spatie Permissions      │  │
-│  │  Axios           │         │  Service + Repository    │  │
-│  └──────────────────┘         └──────────┬───────────────┘  │
-│                                          │                  │
-│                          ┌───────────────┼────────────┐     │
-│                          │               │            │     │
-│                    ┌─────▼─────┐  ┌──────▼────┐ ┌────▼───┐ │
-│                    │  MySQL 8  │  │  Redis 7  │ │Mailpit │ │
-│                    │  :3306    │  │  :6379    │ │ :8025  │ │
-│                    └───────────┘  └───────────┘ └────────┘ │
-└─────────────────────────────────────────────────────────────┘
+```text
+app/
+  Http/
+    Controllers/Api/Auth/
+      AuthenticatedSessionController.php
+      RegisteredUserController.php
+    Requests/Api/Auth/
+      LoginRequest.php
+      RegisterRequest.php
+    Resources/
+      UserResource.php
+  Models/
+    User.php
+  Support/
+    ApiResponse.php
+bootstrap/
+  app.php
+config/
+  cors.php
+database/
+  migrations/
+  seeders/
+    DatabaseSeeder.php
+routes/
+  api.php
+tests/
+  Feature/
+    ApiFoundationTest.php
+    AuthEndpointsTest.php
 ```
 
----
+## API Base URL
 
-## 🛠️ Tech Stack
+The API prefix is configured in `bootstrap/app.php`:
 
-### Backend — Laravel 13
-
-| Technology                | Purpose                                |
-| ------------------------- | -------------------------------------- |
-| Laravel 13                | PHP framework, routing, ORM            |
-| PHP 8.3                   | Language with modern attributes syntax |
-| Laravel Sanctum           | SPA cookie-based authentication        |
-| Spatie Laravel Permission | Role & permission management           |
-| Laravel Queues + Redis    | Async email & notification processing  |
-| MySQL 8                   | Primary relational database            |
-| Laravel Cache + Redis     | Response caching layer                 |
-| Mailpit                   | Local email testing (dev only)         |
-
-### Frontend — Next.js 15
-
-| Technology            | Purpose                             |
-| --------------------- | ----------------------------------- |
-| Next.js 15            | React framework with App Router     |
-| TypeScript 5          | Type-safe development               |
-| Tailwind CSS          | Utility-first styling               |
-| Axios                 | HTTP client with interceptors       |
-| Zustand               | Lightweight global state management |
-| React Hook Form + Zod | Form handling and validation        |
-
-### DevOps
-
-| Technology              | Purpose                         |
-| ----------------------- | ------------------------------- |
-| Docker + Docker Compose | Containerized local environment |
-| Nginx                   | Reverse proxy for Laravel       |
-| Redis                   | Cache + Queue driver            |
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
-- Git
-
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/yourusername/jobboard.git
-cd jobboard
+```text
+/api/v1
 ```
 
-### 2. Setup Environment Files
+Local Docker URL:
 
-```bash
-# Backend
-cp backend/.env.example backend/.env
-
-# Frontend
-cp frontend/.env.example frontend/.env.local
-```
-
-### 3. Start All Services
-
-```bash
-docker compose up -d
-```
-
-This starts: Laravel API, Next.js, MySQL, Redis, Mailpit — all with one command.
-
-### 4. Setup Laravel
-
-```bash
-# Run migrations and seed demo data
-docker compose exec laravel php artisan migrate --seed
-
-# Generate app key
-docker compose exec laravel php artisan key:generate
-```
-
-### 5. Access the Apps
-
-| Service               | URL                                     |
-| --------------------- | --------------------------------------- |
-| 🌐 Frontend (Next.js) | http://localhost:3000                   |
-| 🔧 Backend API        | http://localhost:8000                   |
-| 📧 Mailpit (emails)   | http://localhost:8025                   |
-| 📖 Swagger API Docs   | http://localhost:8000/api/documentation |
-
-### Demo Accounts (after seeding)
-
-| Role       | Email                 | Password |
-| ---------- | --------------------- | -------- |
-| Admin      | admin@jobboard.com    | password |
-| Employer   | employer@jobboard.com | password |
-| Job Seeker | seeker@jobboard.com   | password |
-
----
-
-## 📡 API Documentation
-
-All endpoints are documented via Swagger UI at `/api/documentation`.
-
-### Base URL
-
-```
+```text
 http://localhost:8000/api/v1
 ```
 
-### Response Format (consistent across all endpoints)
+## Authentication Endpoints
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| POST | `/api/v1/auth/register` | Register a new user and start a session |
+| POST | `/api/v1/auth/login` | Log in and regenerate the session |
+| GET | `/api/v1/auth/me` | Return the authenticated user |
+| POST | `/api/v1/auth/logout` | Log out and invalidate the session |
+| GET | `/api/v1/me` | Alternate protected current-user endpoint |
+
+For browser-based SPA authentication, request the Sanctum CSRF cookie first:
+
+```text
+GET /sanctum/csrf-cookie
+```
+
+Then send credentials to `/api/v1/auth/login` with cookies enabled from the Next.js frontend origin.
+
+## Response Format
+
+Successful responses use:
 
 ```json
 {
-    "success": true,
-    "data": {},
-    "message": "Operation successful",
-    "errors": null
+  "success": true,
+  "data": {},
+  "message": "Operation successful.",
+  "errors": null
 }
 ```
 
-### Auth Endpoints
+API exceptions are normalized to:
 
-```
-GET  /sanctum/csrf-cookie     → Get CSRF token (call before login)
-POST /api/v1/auth/register    → Register new user
-POST /api/v1/auth/login       → Login (sets session cookie)
-GET  /api/v1/auth/me          → Get authenticated user
-POST /api/v1/auth/logout      → Logout (clears session)
-```
-
-### Job Endpoints
-
-```
-GET    /api/v1/jobs           → List jobs (paginated, filterable)
-GET    /api/v1/jobs/{id}      → Get single job
-POST   /api/v1/jobs           → Create job (Employer only)
-PUT    /api/v1/jobs/{id}      → Update job (Owner only)
-DELETE /api/v1/jobs/{id}      → Delete job (Owner only)
+```json
+{
+  "success": false,
+  "data": null,
+  "message": "Request failed.",
+  "errors": null
+}
 ```
 
-### Application Endpoints
+## Auth Payloads
 
-```
-POST /api/v1/jobs/{id}/apply  → Apply with resume (Job Seeker)
-GET  /api/v1/applications     → My applications (Job Seeker)
-GET  /api/v1/jobs/{id}/applicants → View applicants (Employer)
-```
+Register:
 
----
-
-## 🗂️ Project Structure
-
-### Backend (Laravel 13)
-
-```
-backend/
-├── app/
-│   ├── Http/
-│   │   ├── Controllers/Api/V1/   ← API Controllers
-│   │   ├── Requests/             ← Form Request validation
-│   │   └── Resources/            ← API Resources (DTOs)
-│   ├── Models/                   ← Eloquent Models
-│   ├── Services/                 ← Business logic layer
-│   ├── Repositories/             ← Data access layer
-│   ├── Events/                   ← Domain events
-│   └── Listeners/                ← Event listeners (queued)
-├── database/
-│   ├── migrations/
-│   └── seeders/
-├── routes/api.php
-└── docker/
-    ├── nginx/
-    └── php/
+```json
+{
+  "name": "Jane Candidate",
+  "email": "jane@example.com",
+  "password": "password",
+  "password_confirmation": "password",
+  "role": "jobseeker"
+}
 ```
 
-### Frontend (Next.js 15)
+Allowed registration roles are:
 
-```
-frontend/
-├── app/
-│   ├── (auth)/
-│   │   ├── login/page.tsx
-│   │   └── register/page.tsx
-│   └── (dashboard)/
-│       ├── employer/jobs/page.tsx
-│       └── jobseeker/browse/page.tsx
-├── lib/
-│   ├── axios.ts              ← Configured Axios instance
-│   └── auth.ts               ← Auth helper functions
-├── store/
-│   └── authStore.ts          ← Zustand global state
-├── types/
-│   └── api.types.ts          ← TypeScript API types
-└── middleware.ts             ← Route protection
+- `employer`
+- `jobseeker`
+
+Login:
+
+```json
+{
+  "email": "admin@jobboard.com",
+  "password": "password"
+}
 ```
 
----
+User API resources return:
 
-## 🔐 Authentication Flow
-
-```
-Next.js                        Laravel
-  │                               │
-  │── GET /sanctum/csrf-cookie ──►│ Set XSRF-TOKEN cookie
-  │                               │
-  │── POST /api/v1/auth/login ───►│ Validate credentials
-  │   (with XSRF-TOKEN header)    │ Set session cookie
-  │◄──────── 200 OK ──────────────│
-  │                               │
-  │── GET /api/v1/auth/me ───────►│ Read session cookie
-  │◄──────── User data ───────────│
-  │                               │
-  │  Store user in Zustand        │
-  │  Redirect to /dashboard       │
+```json
+{
+  "id": 1,
+  "name": "Admin User",
+  "email": "admin@jobboard.com",
+  "role": "admin",
+  "createdAt": "2026-05-20T00:00:00.000000Z"
+}
 ```
 
----
+## Demo Accounts
 
-## 📬 Contact
+After `php artisan migrate:fresh --seed`, the seeder creates:
 
-**Your Name**
+| Role | Email | Password |
+| --- | --- | --- |
+| Admin | `admin@jobboard.com` | `password` |
+| Employer | `employer@jobboard.com` | `password` |
+| Jobseeker | `seeker@jobboard.com` | `password` |
 
-- GitHub: [@yourusername](https://github.com/yourusername)
-- LinkedIn: [yourlinkedin](https://linkedin.com/in/yourlinkedin)
-- Email: your@email.com
+The old `test@example.com` and `jane@example.com` seed users are not part of the current seeder.
 
----
+## Local Setup
 
-<div align="center">
+### With Docker
 
-**If you found this project useful, please consider giving it a ⭐**
+```bash
+docker compose up -d
+docker compose exec laravel-api php artisan key:generate
+docker compose exec laravel-api php artisan migrate:fresh --seed
+```
 
-</div>
+Services from `docker-compose.yml`:
+
+| Service | URL / Port |
+| --- | --- |
+| Laravel API | `http://localhost:8000` |
+| Next.js app | `http://localhost:3000` |
+| MySQL | `localhost:3306` |
+| Redis | `localhost:6379` |
+| Mailpit UI | `http://localhost:8025` |
+
+The `nextjs-app` Docker service is configured to build from `C:\nextjsproject`. Keep React/Next.js files in that project.
+
+### Without Docker
+
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate:fresh --seed
+php artisan serve
+```
+
+If you also need frontend assets for Laravel Vite:
+
+```bash
+npm install
+npm run dev
+```
+
+## Testing
+
+Run the test suite:
+
+```bash
+php artisan test --compact
+```
+
+Run a focused auth test:
+
+```bash
+php artisan test --compact --filter=AuthEndpointsTest
+```
+
+Current tests cover:
+
+- Login with Sanctum session credentials
+- Invalid login validation response
+- Registration and logout
+- Protected API JSON envelope when unauthenticated
+- CORS credentials for `http://localhost:3000`
+
+The existing auth tests expect a MySQL database named `dashboard_api` on `127.0.0.1:3306` with username `dashboard_api` and password `secret`.
+
+## Frontend Integration Notes
+
+The Next.js app should call this API with credentials enabled.
+
+Expected role redirects in the frontend login page:
+
+```ts
+nextUrl ?? (
+  user.role === "admin" ? "/admin/dashboard" :
+  user.role === "employer" ? "/employer/jobs" :
+  "/jobseeker/browse"
+)
+```
+
+Suggested frontend page locations in the separate Next.js project:
+
+```text
+C:\nextjsproject\src\app\(dashboard)\admin\dashboard\page.tsx
+C:\nextjsproject\src\app\(dashboard)\employer\jobs\page.tsx
+C:\nextjsproject\src\app\(dashboard)\jobseeker\browse\page.tsx
+```
+
+## Current Limitations
+
+This backend currently has auth and foundation API pieces in place. Job posting, application upload, employer applicant management, and admin management endpoints are not implemented in this repository yet. Treat any frontend dashboard pages as mock UI until those API endpoints are added.
