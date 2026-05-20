@@ -1,0 +1,84 @@
+services:
+  laravel-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/var/www/html
+    env_file:
+      - .env.docker
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      mailpit:
+        condition: service_started
+    networks:
+      - job-board
+
+  nextjs-app:
+    build:
+      context: ../nextjsproject
+      dockerfile: Dockerfile
+    command: npm run dev -- --hostname 0.0.0.0
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../nextjsproject:/app
+      - nextjs-node-modules:/app/node_modules
+      - nextjs-cache:/app/.next
+    env_file:
+      - ../nextjsproject/.env.docker
+    depends_on:
+      - laravel-api
+    networks:
+      - job-board
+
+  mysql:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: dashboard_api
+      MYSQL_USER: dashboard_api
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - job-board
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - job-board
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - job-board
+
+networks:
+  job-board:
+    driver: bridge
+
+volumes:
+  mysql-data:
+  redis-data:
+  nextjs-node-modules:
+  nextjs-cache:
