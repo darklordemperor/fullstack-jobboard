@@ -9,6 +9,46 @@ backend/   Laravel API, Sanctum auth, migrations, seeders, tests
 frontend/  Next.js app, dashboard pages, auth UI, API client
 ```
 
+```text
+jobboard-fullstack/
+├── backend/
+│   ├── app/
+│   │   ├── Http/
+│   │   │   ├── Controllers/Api/Auth/
+│   │   │   ├── Requests/Api/Auth/
+│   │   │   └── Resources/
+│   │   ├── Models/
+│   │   └── Support/
+│   ├── bootstrap/
+│   ├── config/
+│   ├── database/
+│   │   ├── factories/
+│   │   ├── migrations/
+│   │   └── seeders/
+│   ├── routes/
+│   ├── tests/
+│   ├── composer.json
+│   └── README.md
+├── frontend/
+│   ├── public/
+│   │   └── UI/
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── (auth)/
+│   │   │   └── (dashboard)/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   ├── lib/
+│   │   ├── store/
+│   │   └── types/
+│   ├── next.config.ts
+│   ├── package.json
+│   └── README.md
+├── docker-compose.yml
+├── AGENTS.md
+└── README.md
+```
+
 ```mermaid
 flowchart LR
     subgraph Repo["JobBoard Full Stack Repository"]
