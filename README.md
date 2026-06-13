@@ -1,180 +1,47 @@
-# JobBoard Backend API
+# JobBoard Full Stack
 
-Laravel backend API for a job board application. This repository contains the API, authentication, database migrations, seeders, Docker setup, and tests. The Next.js frontend is a separate project and should live outside this repository, for example at `C:\nextjsproject`.
-
-## Current Scope
-
-This checkout is the Laravel backend project. It currently includes:
-
-- Laravel 13 API application
-- Sanctum session authentication for SPA clients
-- Role field on users: `admin`, `employer`, `jobseeker`
-- Consistent JSON response envelope
-- CORS configured for `http://localhost:3000`
-- Docker Compose services for Laravel, MySQL, Redis, Mailpit, and an external Next.js app path
-- Pest feature tests for authentication, API envelope behavior, and CORS
-
-Frontend routes such as `src/app/(dashboard)/admin/dashboard/page.tsx`, `src/app/(dashboard)/employer/jobs/page.tsx`, and `src/app/(dashboard)/jobseeker/browse/page.tsx` belong in the separate Next.js project, not in this Laravel `app/` directory.
-
-## Tech Stack
-
-| Area | Technology |
-| --- | --- |
-| Backend | Laravel 13 |
-| PHP | PHP 8.3+ |
-| Auth | Laravel Sanctum |
-| Roles | User `role` column plus Spatie Permission package installed |
-| Tests | Pest 4 |
-| Formatting | Laravel Pint |
-| Database | MySQL 8 |
-| Cache/Queue | Redis |
-| Local mail | Mailpit |
-| Containers | Docker Compose |
+Full-stack job board project with a Laravel API backend and a Next.js frontend in one repository.
 
 ## Project Structure
 
 ```text
-app/
-  Http/
-    Controllers/Api/Auth/
-      AuthenticatedSessionController.php
-      RegisteredUserController.php
-    Requests/Api/Auth/
-      LoginRequest.php
-      RegisterRequest.php
-    Resources/
-      UserResource.php
-  Models/
-    User.php
-  Support/
-    ApiResponse.php
-bootstrap/
-  app.php
-config/
-  cors.php
-database/
-  migrations/
-  seeders/
-    DatabaseSeeder.php
-routes/
-  api.php
-tests/
-  Feature/
-    ApiFoundationTest.php
-    AuthEndpointsTest.php
+backend/   Laravel API, Sanctum auth, migrations, seeders, tests
+frontend/  Next.js app, dashboard pages, auth UI, API client
 ```
 
-## API Base URL
+```mermaid
+flowchart LR
+    subgraph Repo["JobBoard Full Stack Repository"]
+        subgraph Frontend["frontend/ - Next.js"]
+            Pages["App Router Pages"]
+            AuthUi["Login and Register UI"]
+            ApiClient["Axios API Client"]
+        end
 
-The API prefix is configured in `bootstrap/app.php`:
+        subgraph Backend["backend/ - Laravel API"]
+            Routes["API Routes /api/v1"]
+            Sanctum["Sanctum Session Auth"]
+            Controllers["Auth Controllers and Resources"]
+            Database["Migrations, Seeders, Models"]
+        end
 
-```text
-/api/v1
+        Compose["docker-compose.yml"]
+    end
+
+    Browser["Browser http://localhost:3000"] --> Pages
+    Pages --> ApiClient
+    ApiClient -->|"credentials + CSRF"| Routes
+    Routes --> Sanctum
+    Routes --> Controllers
+    Controllers --> Database
+    Compose --> Frontend
+    Compose --> Backend
+    Compose --> Services["MySQL, Redis, Mailpit"]
 ```
 
-Local Docker URL:
+## Local Docker Setup
 
-```text
-http://localhost:8000/api/v1
-```
-
-## Authentication Endpoints
-
-| Method | Endpoint | Description |
-| --- | --- | --- |
-| POST | `/api/v1/auth/register` | Register a new user and start a session |
-| POST | `/api/v1/auth/login` | Log in and regenerate the session |
-| GET | `/api/v1/auth/me` | Return the authenticated user |
-| POST | `/api/v1/auth/logout` | Log out and invalidate the session |
-| GET | `/api/v1/me` | Alternate protected current-user endpoint |
-
-For browser-based SPA authentication, request the Sanctum CSRF cookie first:
-
-```text
-GET /sanctum/csrf-cookie
-```
-
-Then send credentials to `/api/v1/auth/login` with cookies enabled from the Next.js frontend origin.
-
-## Response Format
-
-Successful responses use:
-
-```json
-{
-  "success": true,
-  "data": {},
-  "message": "Operation successful.",
-  "errors": null
-}
-```
-
-API exceptions are normalized to:
-
-```json
-{
-  "success": false,
-  "data": null,
-  "message": "Request failed.",
-  "errors": null
-}
-```
-
-## Auth Payloads
-
-Register:
-
-```json
-{
-  "name": "Jane Candidate",
-  "email": "jane@example.com",
-  "password": "password",
-  "password_confirmation": "password",
-  "role": "jobseeker"
-}
-```
-
-Allowed registration roles are:
-
-- `employer`
-- `jobseeker`
-
-Login:
-
-```json
-{
-  "email": "admin@jobboard.com",
-  "password": "password"
-}
-```
-
-User API resources return:
-
-```json
-{
-  "id": 1,
-  "name": "Admin User",
-  "email": "admin@jobboard.com",
-  "role": "admin",
-  "createdAt": "2026-05-20T00:00:00.000000Z"
-}
-```
-
-## Demo Accounts
-
-After `php artisan migrate:fresh --seed`, the seeder creates:
-
-| Role | Email | Password |
-| --- | --- | --- |
-| Admin | `admin@jobboard.com` | `password` |
-| Employer | `employer@jobboard.com` | `password` |
-| Jobseeker | `seeker@jobboard.com` | `password` |
-
-The old `test@example.com` and `jane@example.com` seed users are not part of the current seeder.
-
-## Local Setup
-
-### With Docker
+From the project root:
 
 ```bash
 docker compose up -d
@@ -182,81 +49,47 @@ docker compose exec laravel-api php artisan key:generate
 docker compose exec laravel-api php artisan migrate:fresh --seed
 ```
 
-Services from `docker-compose.yml`:
+Services:
 
 | Service | URL / Port |
 | --- | --- |
+| Frontend | `http://localhost:3000` |
 | Laravel API | `http://localhost:8000` |
-| Next.js app | `http://localhost:3000` |
 | MySQL | `localhost:3306` |
 | Redis | `localhost:6379` |
 | Mailpit UI | `http://localhost:8025` |
 
-The `nextjs-app` Docker service is configured to build from `C:\nextjsproject`. Keep React/Next.js files in that project.
+The frontend container talks to the backend through Docker as `http://laravel-api:80`. Browser requests use the public API at `http://localhost:8000`.
 
-### Without Docker
+## Backend
+
+The Laravel app lives in `backend/`.
 
 ```bash
+cd backend
 composer install
 cp .env.example .env
 php artisan key:generate
 php artisan migrate:fresh --seed
-php artisan serve
+php artisan test --compact
 ```
 
-If you also need frontend assets for Laravel Vite:
+API routes are prefixed with:
+
+```text
+/api/v1
+```
+
+See `backend/README.md` for the backend API details.
+
+## Frontend
+
+The Next.js app lives in `frontend/`.
 
 ```bash
+cd frontend
 npm install
 npm run dev
 ```
 
-## Testing
-
-Run the test suite:
-
-```bash
-php artisan test --compact
-```
-
-Run a focused auth test:
-
-```bash
-php artisan test --compact --filter=AuthEndpointsTest
-```
-
-Current tests cover:
-
-- Login with Sanctum session credentials
-- Invalid login validation response
-- Registration and logout
-- Protected API JSON envelope when unauthenticated
-- CORS credentials for `http://localhost:3000`
-
-The existing auth tests expect a MySQL database named `dashboard_api` on `127.0.0.1:3306` with username `dashboard_api` and password `secret`.
-
-## Frontend Integration Notes
-
-The Next.js app should call this API with credentials enabled.
-
-Expected role redirects in the frontend login page:
-
-```ts
-nextUrl ?? (
-  user.role === "admin" ? "/admin/dashboard" :
-  user.role === "employer" ? "/employer/jobs" :
-  "/jobseeker/browse"
-)
-```
-
-Suggested frontend page locations in the separate Next.js project:
-
-```text
-C:\nextjsproject\src\app\(dashboard)\admin\dashboard\page.tsx
-C:\nextjsproject\src\app\(dashboard)\employer\jobs\page.tsx
-C:\nextjsproject\src\app\(dashboard)\jobseeker\browse\page.tsx
-```
-
-## Current Limitations
-
-This backend currently has auth and foundation API pieces in place. Job posting, application upload, employer applicant management, and admin management endpoints are not implemented in this repository yet. Treat any frontend dashboard pages as mock UI until those API endpoints are added.
+See `frontend/README.md` for frontend-specific notes.

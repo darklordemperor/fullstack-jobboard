@@ -1,14 +1,14 @@
 services:
   laravel-api:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
     ports:
       - "8000:80"
     volumes:
-      - .:/var/www/html
+      - ./backend:/var/www/html
     env_file:
-      - .env.docker
+      - ./backend/.env.docker
     depends_on:
       mysql:
         condition: service_healthy
@@ -21,18 +21,17 @@ services:
 
   nextjs-app:
     build:
-      context: C:\nextjsproject
+      context: ./frontend
       dockerfile: Dockerfile
     command: npm run dev -- --hostname 0.0.0.0
     ports:
       - "3000:3000"
     volumes:
-      - C:\nextjsproject:/app
+      - ./frontend:/app
       - /app/node_modules
       - /app/.next
-    environment:
-      - NEXT_PUBLIC_API_URL=
-      - NEXT_INTERNAL_API_URL=http://laravel-api:80
+    env_file:
+      - ./frontend/.env.docker
     depends_on:
       - laravel-api
     networks:
