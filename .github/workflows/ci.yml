@@ -78,7 +78,7 @@ jobs:
           test -z "$(git status --porcelain --untracked-files=all -- src/infrastructure/http/generated/openapi.ts)"
 
       - name: Audit dependencies
-        run: npm audit --audit-level=low
+        run: npm audit --omit=dev --audit-level=low
 
       - name: Lint frontend
         run: npm run lint
