@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Api\Auth\RegisteredUserController;
 use App\Http\Controllers\Api\EmployerJobListingController;
+use App\Http\Controllers\Api\InterviewController;
 use App\Http\Controllers\Api\JobApplicationController;
 use App\Http\Controllers\Api\JobListingController;
 use Illuminate\Support\Facades\Route;
@@ -52,3 +53,19 @@ Route::prefix('employer/job-listings')->middleware('auth:sanctum')->group(functi
 Route::patch('/employer/applications/{jobApplication}/status', [JobApplicationController::class, 'updateStatus'])
     ->middleware('auth:sanctum')
     ->whereNumber('jobApplication');
+
+Route::middleware('auth:sanctum')->group(function (): void {
+    Route::post('/employer/applications/{jobApplication}/interviews', [InterviewController::class, 'store'])
+        ->whereNumber('jobApplication');
+    Route::get('/employer/interviews', [InterviewController::class, 'employerIndex']);
+    Route::patch('/employer/interviews/{interview}/reschedule', [InterviewController::class, 'reschedule'])
+        ->whereNumber('interview');
+    Route::patch('/employer/interviews/{interview}/cancel', [InterviewController::class, 'cancel'])
+        ->whereNumber('interview');
+    Route::patch('/employer/interviews/{interview}/complete', [InterviewController::class, 'complete'])
+        ->whereNumber('interview');
+
+    Route::get('/jobseeker/interviews', [InterviewController::class, 'candidateIndex']);
+    Route::patch('/jobseeker/interviews/{interview}/confirm', [InterviewController::class, 'confirm'])
+        ->whereNumber('interview');
+});
