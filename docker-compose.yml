@@ -65,7 +65,7 @@ services:
       - >-
         mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs
         && touch /e2e/database.sqlite
-        && chown -R www-data:www-data /e2e
+        && chown -R www-data:www-data /e2e storage bootstrap/cache
         && chmod -R ug+rwX storage bootstrap/cache /e2e
         && php artisan migrate:fresh --seed --force
         && php-fpm -D
