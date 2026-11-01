@@ -7,11 +7,13 @@ RUN apt-get update \
     git \
     nginx \
     unzip \
+    libsqlite3-dev \
     libzip-dev \
     && docker-php-ext-install \
     bcmath \
     pcntl \
     pdo_mysql \
+    pdo_sqlite \
     zip \
     && pecl install redis \
     && docker-php-ext-enable redis \

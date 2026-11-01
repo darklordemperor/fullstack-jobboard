@@ -53,11 +53,61 @@ services:
     networks:
       - job-board
 
+  backend-e2e:
+    profiles:
+      - e2e
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command:
+      - sh
+      - -c
+      - >-
+        mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs
+        && touch /e2e/database.sqlite
+        && chown -R www-data:www-data /e2e
+        && chmod -R ug+rwX storage bootstrap/cache /e2e
+        && php artisan migrate:fresh --seed --force
+        && php-fpm -D
+        && nginx -g 'daemon off;'
+    ports:
+      - "8001:80"
+    volumes:
+      - ./backend:/var/www/html
+      - e2e-data:/e2e
+    environment:
+      APP_NAME: Job Board E2E
+      APP_ENV: testing
+      APP_KEY: base64:YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8001
+      FRONTEND_URL: http://localhost:3001
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /e2e/database.sqlite
+      SESSION_DRIVER: database
+      SESSION_COOKIE: job_board_session
+      SESSION_DOMAIN: null
+      SESSION_SECURE_COOKIE: "false"
+      SESSION_SAME_SITE: lax
+      SANCTUM_STATEFUL_DOMAINS: localhost:3001,frontend-e2e:3000
+      CORS_ALLOWED_ORIGINS: http://localhost:3001,http://frontend-e2e:3000
+      CACHE_STORE: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      LOG_CHANNEL: stderr
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1/up') === false ? 1 : 0);"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    networks:
+      - job-board
+
   nextjs-app:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    command: npm run dev -- --hostname 0.0.0.0
+    command: ["sh", "docker/dev-start.sh"]
     ports:
       - "3000:3000"
     volumes:
@@ -68,6 +118,49 @@ services:
       - ./frontend/.env.docker
     depends_on:
       - laravel-api
+    networks:
+      - job-board
+
+  frontend-e2e:
+    profiles:
+      - e2e
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    command: npm run dev -- --hostname 0.0.0.0
+    ports:
+      - "3001:3000"
+    environment:
+      NEXT_INTERNAL_API_URL: http://backend-e2e:80
+      NEXT_TELEMETRY_DISABLED: "1"
+    depends_on:
+      backend-e2e:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/login').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    networks:
+      - job-board
+
+  playwright-e2e:
+    profiles:
+      - e2e
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.e2e
+    init: true
+    ipc: host
+    environment:
+      PLAYWRIGHT_BASE_URL: http://frontend-e2e:3000
+      CI: "true"
+    volumes:
+      - ./frontend/playwright-report:/app/playwright-report
+      - ./frontend/test-results:/app/test-results
+    depends_on:
+      frontend-e2e:
+        condition: service_healthy
     networks:
       - job-board
 
@@ -114,3 +207,4 @@ networks:
 volumes:
   mysql-data:
   redis-data:
+  e2e-data:

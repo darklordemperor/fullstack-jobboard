@@ -4,6 +4,11 @@
 !.env.example
 !backend/.env.testing
 
+# Isolated browser-test artifacts
+backend/database/e2e.sqlite
+frontend/playwright-report/
+frontend/test-results/
+
 # Dependencies and build output
 node_modules/
 .next/

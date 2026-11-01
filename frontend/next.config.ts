@@ -6,6 +6,7 @@ const apiUrl =
   "http://localhost:8000";
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: ["frontend-e2e"],
   async rewrites() {
     return [
       {
