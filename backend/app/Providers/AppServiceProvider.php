@@ -5,7 +5,9 @@ namespace App\Providers;
 use App\Application\Auth\Contracts\AuthSession;
 use App\Application\Auth\Contracts\PasswordHasher;
 use App\Domain\Auth\Repositories\UserRepository;
+use App\Domain\JobListings\Repositories\JobListingRepository;
 use App\Infrastructure\Auth\LaravelAuthSession;
+use App\Infrastructure\Persistence\Eloquent\EloquentJobListingRepository;
 use App\Infrastructure\Persistence\Eloquent\EloquentUserRepository;
 use App\Infrastructure\Security\LaravelPasswordHasher;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -21,6 +23,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(UserRepository::class, EloquentUserRepository::class);
+        $this->app->bind(JobListingRepository::class, EloquentJobListingRepository::class);
         $this->app->bind(PasswordHasher::class, LaravelPasswordHasher::class);
         $this->app->scoped(AuthSession::class, LaravelAuthSession::class);
     }
