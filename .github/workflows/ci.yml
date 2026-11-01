@@ -1,0 +1,124 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  workflow-lint:
+    name: Workflow lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Validate GitHub Actions workflows
+        run: docker run --rm --volume "$PWD:/repo" --workdir /repo rhysd/actionlint:1.7.12 -color
+
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build backend test image
+        run: docker compose --profile test build backend-test
+
+      - name: Install Composer dependencies
+        run: docker compose --profile test run --rm --no-deps backend-test composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Check PHP formatting
+        run: docker compose --profile test run --rm --no-deps backend-test vendor/bin/pint --test
+
+      - name: Verify clean architecture boundaries
+        run: docker compose --profile test run --rm --no-deps backend-test vendor/bin/pest tests/Unit/Architecture --compact
+
+      - name: Run backend test suite
+        run: docker compose --profile test run --rm --no-deps backend-test vendor/bin/pest --compact
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 20.20.2
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Verify generated API types are current
+        run: |
+          npm run generate:api-types
+          git diff --exit-code -- src/infrastructure/http/generated/openapi.ts
+          test -z "$(git status --porcelain --untracked-files=all -- src/infrastructure/http/generated/openapi.ts)"
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=low
+
+      - name: Lint frontend
+        run: npm run lint
+
+      - name: Type-check frontend
+        run: npx tsc --noEmit
+
+      - name: Run frontend unit tests
+        run: npm test
+
+      - name: Build frontend
+        run: npm run build
+
+  e2e:
+    name: Browser E2E
+    needs:
+      - workflow-lint
+      - backend
+      - frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Run isolated Playwright journey
+        run: bash scripts/test-e2e.sh
+
+      - name: Upload Playwright failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-failure-artifacts
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Clean up E2E services
+        if: always()
+        run: docker compose rm -sf backend-e2e frontend-e2e
