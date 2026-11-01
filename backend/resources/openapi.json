@@ -1,0 +1,1650 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "JobBoard API",
+    "version": "1.0.0",
+    "summary": "Clean Architecture job board API",
+    "description": "Laravel API for browser-session authentication, job listings, applications, private resumes, and interview scheduling. All JSON responses use a consistent success/data/message/errors envelope."
+  },
+  "servers": [
+    {
+      "url": "/api/v1",
+      "description": "Current host"
+    }
+  ],
+  "tags": [
+    { "name": "Contract", "description": "Machine-readable API contract" },
+    { "name": "Administration", "description": "Admin-only platform analytics" },
+    { "name": "Authentication", "description": "Sanctum stateful SPA session authentication" },
+    { "name": "Job Listings", "description": "Public search and employer-owned listing lifecycle" },
+    { "name": "Applications", "description": "Candidate submissions and employer review" },
+    { "name": "Interviews", "description": "Interview scheduling and lifecycle" },
+    { "name": "Notifications", "description": "In-app notifications and read state" }
+  ],
+  "paths": {
+    "/openapi.json": {
+      "get": {
+        "tags": ["Contract"],
+        "summary": "Get the OpenAPI contract",
+        "operationId": "getOpenApiDocument",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "OpenAPI 3.1 JSON document",
+            "content": {
+              "application/vnd.oai.openapi+json": {
+                "schema": { "type": "object" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/dashboard": {
+      "get": {
+        "tags": ["Administration"],
+        "summary": "Get platform analytics for the admin dashboard",
+        "description": "Returns compact aggregate metrics, six UTC calendar-month growth buckets, recent activity, and the five latest users. Metric change percentages compare the current period with the preceding equivalent period; null means no previous-period baseline exists.",
+        "operationId": "getAdminDashboard",
+        "security": [{ "sanctumSession": [] }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/AdminDashboardOk" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/admin/users": {
+      "get": {
+        "tags": ["Administration"],
+        "summary": "Search and paginate registered platform users",
+        "operationId": "listAdminUsers",
+        "security": [{ "sanctumSession": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/SearchQuery" },
+          { "$ref": "#/components/parameters/AdminUserRoleQuery" },
+          { "$ref": "#/components/parameters/AdminUserStatusQuery" },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PerPage" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/AdminUserCollection" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/admin/users/{user}": {
+      "patch": {
+        "tags": ["Administration"],
+        "summary": "Update a user's role or suspension status",
+        "operationId": "updateAdminUser",
+        "security": [{ "sanctumSession": [] }, { "xsrfToken": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/UserId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateAdminUserRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/AdminUserOk" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "419": { "$ref": "#/components/responses/CsrfMismatch" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/notifications": {
+      "get": {
+        "tags": ["Notifications"],
+        "summary": "List paginated in-app notifications for the authenticated user",
+        "operationId": "listNotifications",
+        "security": [{ "sanctumSession": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PerPage" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/NotificationCollection" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" }
+        }
+      }
+    },
+    "/notifications/{notification}/read": {
+      "patch": {
+        "tags": ["Notifications"],
+        "summary": "Mark a single notification as read",
+        "operationId": "markNotificationAsRead",
+        "security": [{ "sanctumSession": [] }, { "xsrfToken": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/NotificationId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/NotificationOk" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "419": { "$ref": "#/components/responses/CsrfMismatch" }
+        }
+      }
+    },
+    "/notifications/read-all": {
+      "post": {
+        "tags": ["Notifications"],
+        "summary": "Mark all notifications as read for the authenticated user",
+        "operationId": "markAllNotificationsAsRead",
+        "security": [{ "sanctumSession": [] }, { "xsrfToken": [] }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/EmptyOk" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "419": { "$ref": "#/components/responses/CsrfMismatch" }
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Register a browser-session user",
+        "operationId": "registerUser",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RegisterRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": { "$ref": "#/components/responses/UserCreated" },
+          "422": { "$ref": "#/components/responses/ValidationError" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Sign in and regenerate the session",
+        "operationId": "loginUser",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/UserOk" },
+          "422": { "$ref": "#/components/responses/ValidationError" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "tags": ["Authentication"],
+        "summary": "Get the authenticated user",
+        "operationId": "getAuthenticatedUser",
+        "security": [{ "sanctumSession": [] }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/UserOk" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" }
+        }
+      }
+    },
+    "/auth/profile": {
+      "patch": {
+        "tags": ["Authentication"],
+        "summary": "Update the authenticated user's profile and optional password",
+        "operationId": "updateAccountProfile",
+        "security": [{ "sanctumSession": [], "xsrfToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateProfileRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/UserOk" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "419": { "$ref": "#/components/responses/CsrfMismatch" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Sign out and invalidate the session",
+        "operationId": "logoutUser",
+        "security": [{ "sanctumSession": [], "xsrfToken": [] }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/EmptyOk" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "419": { "$ref": "#/components/responses/CsrfMismatch" }
+        }
+      }
+    },
+    "/me": {
+      "get": {
+        "tags": ["Authentication"],
+        "summary": "Get the authenticated user using the compatibility alias",
+        "operationId": "getAuthenticatedUserAlias",
+        "security": [{ "sanctumSession": [] }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/UserOk" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" }
+        }
+      }
+    },
+    "/job-listings": {
+      "get": {
+        "tags": ["Job Listings"],
+        "summary": "Search published job listings",
+        "operationId": "searchJobListings",
+        "security": [],
+        "parameters": [
+          { "$ref": "#/components/parameters/Keyword" },
+          { "$ref": "#/components/parameters/Location" },
+          { "$ref": "#/components/parameters/EmploymentTypes" },
+          { "$ref": "#/components/parameters/SalaryCap" },
+          { "$ref": "#/components/parameters/Category" },
+          { "$ref": "#/components/parameters/SavedOnly" },
+          { "$ref": "#/components/parameters/JobSort" },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PerPage" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/PublicJobListingCollection" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/job-listings/{jobListing}": {
+      "get": {
+        "tags": ["Job Listings"],
+        "summary": "Get a published job listing",
+        "operationId": "getPublishedJobListing",
+        "security": [],
+        "parameters": [{ "$ref": "#/components/parameters/JobListingId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/JobListingOk" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/employer/job-listings": {
+      "get": {
+        "tags": ["Job Listings"],
+        "summary": "List the authenticated employer's listings",
+        "operationId": "listEmployerJobListings",
+        "security": [{ "sanctumSession": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/JobListingStatus" },
+          { "$ref": "#/components/parameters/SearchQuery" },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PerPage" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/EmployerJobListingCollection" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      },
+      "post": {
+        "tags": ["Job Listings"],
+        "summary": "Create a draft job listing",
+        "operationId": "createJobListing",
+        "security": [{ "sanctumSession": [], "xsrfToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/JobListingWriteRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": { "$ref": "#/components/responses/JobListingCreated" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "419": { "$ref": "#/components/responses/CsrfMismatch" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/employer/job-listings/{jobListing}": {
+      "get": {
+        "tags": ["Job Listings"],
+        "summary": "Get an employer-owned job listing",
+        "operationId": "getEmployerJobListing",
+        "security": [{ "sanctumSession": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/JobListingId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/JobListingOk" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Job Listings"],
+        "summary": "Update an employer-owned job listing",
+        "operationId": "updateJobListing",
+        "security": [{ "sanctumSession": [], "xsrfToken": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/JobListingId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/JobListingWriteRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/JobListingOk" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "419": { "$ref": "#/components/responses/CsrfMismatch" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/employer/job-listings/{jobListing}/publish": {
+      "post": {
+        "tags": ["Job Listings"],
+        "summary": "Publish a draft job listing",
+        "operationId": "publishJobListing",
+        "security": [{ "sanctumSession": [], "xsrfToken": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/JobListingId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/JobListingOk" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "419": { "$ref": "#/components/responses/CsrfMismatch" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/employer/job-listings/{jobListing}/close": {
+      "post": {
+        "tags": ["Job Listings"],
+        "summary": "Close an employer-owned job listing",
+        "operationId": "closeJobListing",
+        "security": [{ "sanctumSession": [], "xsrfToken": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/JobListingId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/JobListingOk" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "419": { "$ref": "#/components/responses/CsrfMismatch" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/job-listings/{jobListing}/applications": {
+      "post": {
+        "tags": ["Applications"],
+        "summary": "Apply to a published job listing",
+        "operationId": "submitJobApplication",
+        "security": [{ "sanctumSession": [], "xsrfToken": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/JobListingId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/JobApplicationWriteRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": { "$ref": "#/components/responses/JobApplicationCreated" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "419": { "$ref": "#/components/responses/CsrfMismatch" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/jobseeker/applications": {
+      "get": {
+        "tags": ["Applications"],
+        "summary": "List the authenticated candidate's applications",
+        "operationId": "listJobseekerApplications",
+        "security": [{ "sanctumSession": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/JobApplicationStatus" },
+          { "$ref": "#/components/parameters/SearchQuery" },
+          { "$ref": "#/components/parameters/JobListingQueryId" },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PerPage" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/JobApplicationCollection" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/jobseeker/applications/{jobApplication}/withdraw": {
+      "patch": {
+        "tags": ["Applications"],
+        "summary": "Withdraw an active application",
+        "operationId": "withdrawJobApplication",
+        "security": [{ "sanctumSession": [], "xsrfToken": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/JobApplicationId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/JobApplicationOk" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "419": { "$ref": "#/components/responses/CsrfMismatch" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/jobseeker/saved-jobs": {
+      "get": {
+        "tags": ["Job Listings"],
+        "summary": "List the authenticated jobseeker's saved job listing IDs",
+        "operationId": "listSavedJobListings",
+        "security": [{ "sanctumSession": [] }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/SavedJobListingsOk" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/jobseeker/saved-jobs/{jobListing}": {
+      "post": {
+        "tags": ["Job Listings"],
+        "summary": "Save a published job listing for the authenticated jobseeker",
+        "operationId": "saveJobListing",
+        "security": [{ "sanctumSession": [], "xsrfToken": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/JobListingId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/SavedJobListingsOk" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "419": { "$ref": "#/components/responses/CsrfMismatch" }
+        }
+      },
+      "delete": {
+        "tags": ["Job Listings"],
+        "summary": "Remove a job listing from the authenticated jobseeker's saved jobs",
+        "operationId": "removeSavedJobListing",
+        "security": [{ "sanctumSession": [], "xsrfToken": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/JobListingId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/SavedJobListingsOk" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "419": { "$ref": "#/components/responses/CsrfMismatch" }
+        }
+      }
+    },
+    "/employer/job-listings/{jobListing}/applications": {
+      "get": {
+        "tags": ["Applications"],
+        "summary": "List applications for an employer-owned listing",
+        "operationId": "listEmployerJobApplications",
+        "security": [{ "sanctumSession": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/JobListingId" },
+          { "$ref": "#/components/parameters/JobApplicationStatus" },
+          { "$ref": "#/components/parameters/SearchQuery" },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PerPage" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/JobApplicationCollection" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/employer/applications/{jobApplication}/status": {
+      "patch": {
+        "tags": ["Applications"],
+        "summary": "Update an application hiring status",
+        "operationId": "updateJobApplicationStatus",
+        "security": [{ "sanctumSession": [], "xsrfToken": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/JobApplicationId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/JobApplicationStatusRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/JobApplicationOk" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "419": { "$ref": "#/components/responses/CsrfMismatch" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/job-applications/{jobApplication}/resume": {
+      "get": {
+        "tags": ["Applications"],
+        "summary": "Download a private PDF resume",
+        "description": "Available only to the applicant or the employer who owns the related listing. The response is private and not cached.",
+        "operationId": "downloadJobApplicationResume",
+        "security": [{ "sanctumSession": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/JobApplicationId" }],
+        "responses": {
+          "200": {
+            "description": "PDF resume attachment",
+            "headers": {
+              "Content-Disposition": {
+                "schema": { "type": "string" },
+                "description": "Attachment filename"
+              },
+              "Cache-Control": {
+                "schema": { "type": "string", "example": "private, no-store" }
+              }
+            },
+            "content": {
+              "application/pdf": {
+                "schema": { "type": "string", "format": "binary" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/employer/applications/{jobApplication}/interviews": {
+      "post": {
+        "tags": ["Interviews"],
+        "summary": "Schedule an interview for a shortlisted application",
+        "operationId": "scheduleInterview",
+        "security": [{ "sanctumSession": [], "xsrfToken": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/JobApplicationId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/InterviewWriteRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": { "$ref": "#/components/responses/InterviewCreated" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "419": { "$ref": "#/components/responses/CsrfMismatch" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/employer/interviews": {
+      "get": {
+        "tags": ["Interviews"],
+        "summary": "List the authenticated employer's interviews",
+        "operationId": "listEmployerInterviews",
+        "security": [{ "sanctumSession": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/InterviewStatus" },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PerPage" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/InterviewCollection" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/employer/interviews/{interview}/reschedule": {
+      "patch": {
+        "tags": ["Interviews"],
+        "summary": "Reschedule an active interview",
+        "description": "A rescheduled interview returns to scheduled status and requires candidate confirmation again.",
+        "operationId": "rescheduleInterview",
+        "security": [{ "sanctumSession": [], "xsrfToken": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/InterviewId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/InterviewWriteRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/InterviewOk" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "419": { "$ref": "#/components/responses/CsrfMismatch" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/employer/interviews/{interview}/cancel": {
+      "patch": {
+        "tags": ["Interviews"],
+        "summary": "Cancel an active interview",
+        "operationId": "cancelInterview",
+        "security": [{ "sanctumSession": [], "xsrfToken": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/InterviewId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/InterviewOk" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "419": { "$ref": "#/components/responses/CsrfMismatch" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/employer/interviews/{interview}/complete": {
+      "patch": {
+        "tags": ["Interviews"],
+        "summary": "Complete a confirmed interview after its end time",
+        "operationId": "completeInterview",
+        "security": [{ "sanctumSession": [], "xsrfToken": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/InterviewId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/InterviewOk" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "419": { "$ref": "#/components/responses/CsrfMismatch" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/jobseeker/interviews": {
+      "get": {
+        "tags": ["Interviews"],
+        "summary": "List the authenticated candidate's interviews",
+        "operationId": "listCandidateInterviews",
+        "security": [{ "sanctumSession": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/InterviewStatus" },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PerPage" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/InterviewCollection" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/jobseeker/interviews/{interview}/confirm": {
+      "patch": {
+        "tags": ["Interviews"],
+        "summary": "Confirm a scheduled interview",
+        "operationId": "confirmInterview",
+        "security": [{ "sanctumSession": [], "xsrfToken": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/InterviewId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/InterviewOk" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "419": { "$ref": "#/components/responses/CsrfMismatch" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "sanctumSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "laravel_session",
+        "description": "Stateful browser session established by login. Obtain the CSRF cookie from /sanctum/csrf-cookie before state-changing requests."
+      },
+      "xsrfToken": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-XSRF-TOKEN",
+        "description": "Decoded XSRF-TOKEN cookie value required for state-changing browser requests."
+      }
+    },
+    "parameters": {
+      "JobListingId": {
+        "name": "jobListing",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "integer", "minimum": 1 },
+        "example": 42
+      },
+      "JobApplicationId": {
+        "name": "jobApplication",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "integer", "minimum": 1 },
+        "example": 73
+      },
+      "InterviewId": {
+        "name": "interview",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "integer", "minimum": 1 },
+        "example": 18
+      },
+      "Page": {
+        "name": "page",
+        "in": "query",
+        "schema": { "type": "integer", "minimum": 1, "default": 1 }
+      },
+      "PerPage": {
+        "name": "perPage",
+        "in": "query",
+        "schema": { "type": "integer", "minimum": 1, "maximum": 50 }
+      },
+      "Keyword": {
+        "name": "keyword",
+        "in": "query",
+        "schema": { "type": "string", "maxLength": 100 },
+        "example": "backend"
+      },
+      "Location": {
+        "name": "location",
+        "in": "query",
+        "schema": { "type": "string", "maxLength": 100 },
+        "example": "Remote"
+      },
+      "EmploymentTypes": {
+        "name": "employmentTypes",
+        "in": "query",
+        "style": "form",
+        "explode": true,
+        "schema": {
+          "type": "array",
+          "maxItems": 4,
+          "items": { "$ref": "#/components/schemas/EmploymentType" }
+        }
+      },
+      "SalaryCap": {
+        "name": "salaryCap",
+        "in": "query",
+        "schema": { "type": "integer", "minimum": 0, "maximum": 10000000 },
+        "example": 90000
+      },
+      "Category": {
+        "name": "category",
+        "in": "query",
+        "schema": { "type": "string", "maxLength": 100 },
+        "example": "IT"
+      },
+      "SavedOnly": {
+        "name": "savedOnly",
+        "in": "query",
+        "description": "Filter published job listings to those bookmarked by the authenticated jobseeker.",
+        "schema": { "type": "boolean" },
+        "example": true
+      },
+      "JobListingQueryId": {
+        "name": "jobListingId",
+        "in": "query",
+        "description": "Filter candidate applications to a specific job listing ID.",
+        "schema": { "type": "integer", "minimum": 1 },
+        "example": 42
+      },
+      "JobSort": {
+        "name": "sort",
+        "in": "query",
+        "schema": { "type": "string", "enum": ["newest", "salary_desc"], "default": "newest" }
+      },
+      "JobListingStatus": {
+        "name": "status",
+        "in": "query",
+        "schema": { "$ref": "#/components/schemas/JobListingStatus" }
+      },
+      "JobApplicationStatus": {
+        "name": "status",
+        "in": "query",
+        "schema": { "$ref": "#/components/schemas/JobApplicationStatus" }
+      },
+      "InterviewStatus": {
+        "name": "status",
+        "in": "query",
+        "schema": { "$ref": "#/components/schemas/InterviewStatus" }
+      },
+      "SearchQuery": {
+        "name": "search",
+        "in": "query",
+        "description": "Case-insensitive search term for name, email, or cover letter text.",
+        "schema": { "type": "string", "maxLength": 100 },
+        "example": "Jane"
+      },
+      "AdminUserRoleQuery": {
+        "name": "role",
+        "in": "query",
+        "schema": { "$ref": "#/components/schemas/UserRole" }
+      },
+      "AdminUserStatusQuery": {
+        "name": "status",
+        "in": "query",
+        "schema": { "$ref": "#/components/schemas/AdminUserStatus" }
+      },
+      "UserId": {
+        "name": "user",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "integer", "minimum": 1 },
+        "example": 5
+      },
+      "NotificationId": {
+        "name": "notification",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string", "format": "uuid" },
+        "example": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d"
+      }
+    },
+    "responses": {
+      "AdminDashboardOk": {
+        "description": "Admin platform analytics",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminDashboardEnvelope" } } }
+      },
+      "AdminUserCollection": {
+        "description": "Paginated platform user directory",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminUserCollectionEnvelope" } } }
+      },
+      "AdminUserOk": {
+        "description": "User updated successfully",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminUserEnvelope" } } }
+      },
+      "NotificationOk": {
+        "description": "Notification updated successfully",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NotificationEnvelope" } } }
+      },
+      "NotificationCollection": {
+        "description": "Paginated user notifications and unread count",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NotificationCollectionEnvelope" } } }
+      },
+      "UserOk": {
+        "description": "User response",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserEnvelope" } } }
+      },
+      "UserCreated": {
+        "description": "Account created and session started",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserEnvelope" } } }
+      },
+      "EmptyOk": {
+        "description": "Operation completed without a resource payload",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EmptyEnvelope" } } }
+      },
+      "PublicJobListingCollection": {
+        "description": "Paginated compact published listings plus available facets",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PublicJobListingCollectionEnvelope" } } }
+      },
+      "EmployerJobListingCollection": {
+        "description": "Paginated compact employer listings plus unfiltered status counts",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EmployerJobListingCollectionEnvelope" } } }
+      },
+      "JobListingOk": {
+        "description": "Job listing response",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/JobListingEnvelope" } } }
+      },
+      "JobListingCreated": {
+        "description": "Draft job listing created",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/JobListingEnvelope" } } }
+      },
+      "SavedJobListingsOk": {
+        "description": "Saved published job listing IDs for the authenticated jobseeker",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SavedJobListingsEnvelope" } } }
+      },
+      "JobApplicationCollection": {
+        "description": "Paginated applications plus unfiltered lifecycle counts",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/JobApplicationCollectionEnvelope" } } }
+      },
+      "JobApplicationOk": {
+        "description": "Job application response",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/JobApplicationEnvelope" } } }
+      },
+      "JobApplicationCreated": {
+        "description": "Application submitted",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/JobApplicationEnvelope" } } }
+      },
+      "InterviewCollection": {
+        "description": "Paginated interviews",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/InterviewCollectionEnvelope" } } }
+      },
+      "InterviewOk": {
+        "description": "Interview response",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/InterviewEnvelope" } } }
+      },
+      "InterviewCreated": {
+        "description": "Interview scheduled",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/InterviewEnvelope" } } }
+      },
+      "Unauthenticated": {
+        "description": "The browser session is missing or expired",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+      },
+      "Forbidden": {
+        "description": "The authenticated user lacks the required role or ownership",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+      },
+      "NotFound": {
+        "description": "The requested resource was not found or is not publicly visible",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+      },
+      "ValidationError": {
+        "description": "Request validation or lifecycle transition failed",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+      },
+      "CsrfMismatch": {
+        "description": "The XSRF token is missing, expired, or does not match the session",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+      },
+      "TooManyRequests": {
+        "description": "Rate limit exceeded. Too many requests.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+      }
+    },
+    "schemas": {
+      "AdminActivityType": {
+        "type": "string",
+        "enum": ["user_registered", "job_published", "application_submitted", "candidate_hired"]
+      },
+      "AdminUserStatus": {
+        "type": "string",
+        "enum": ["verified", "unverified", "suspended"]
+      },
+      "UserRole": {
+        "type": "string",
+        "enum": ["admin", "employer", "jobseeker"]
+      },
+      "EmploymentType": {
+        "type": "string",
+        "enum": ["full_time", "part_time", "contract", "remote"]
+      },
+      "JobListingStatus": {
+        "type": "string",
+        "enum": ["draft", "published", "closed"]
+      },
+      "JobApplicationStatus": {
+        "type": "string",
+        "enum": ["submitted", "reviewing", "shortlisted", "rejected", "hired", "withdrawn"]
+      },
+      "EmployerManagedJobApplicationStatus": {
+        "type": "string",
+        "enum": ["submitted", "reviewing", "shortlisted", "rejected", "hired"]
+      },
+      "InterviewStatus": {
+        "type": "string",
+        "enum": ["scheduled", "confirmed", "cancelled", "completed"]
+      },
+      "LoginRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "format": "email", "example": "seeker@jobboard.com" },
+          "password": { "type": "string", "format": "password", "writeOnly": true, "example": "password" }
+        }
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "email", "password", "password_confirmation"],
+        "properties": {
+          "name": { "type": "string", "maxLength": 255, "example": "Jane Candidate" },
+          "email": { "type": "string", "format": "email", "maxLength": 255, "example": "jane@example.com" },
+          "password": { "type": "string", "format": "password", "writeOnly": true, "example": "password" },
+          "password_confirmation": { "type": "string", "format": "password", "writeOnly": true, "example": "password" },
+          "role": { "type": "string", "enum": ["employer", "jobseeker"], "default": "jobseeker" }
+        }
+      },
+      "UpdateProfileRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "email"],
+        "properties": {
+          "name": { "type": "string", "maxLength": 255, "example": "Jane Candidate" },
+          "email": { "type": "string", "format": "email", "maxLength": 255, "example": "jane@example.com" },
+          "currentPassword": { "type": ["string", "null"], "format": "password", "writeOnly": true, "example": "password" },
+          "newPassword": { "type": ["string", "null"], "format": "password", "writeOnly": true, "example": "NewPassword123!" },
+          "newPassword_confirmation": { "type": ["string", "null"], "format": "password", "writeOnly": true, "example": "NewPassword123!" }
+        }
+      },
+      "UpdateAdminUserRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "role": { "$ref": "#/components/schemas/UserRole" },
+          "suspended": { "type": "boolean" }
+        }
+      },
+      "JobListingWriteRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title", "description", "location", "employmentType", "category", "salaryMinimum", "salaryMaximum"],
+        "properties": {
+          "title": { "type": "string", "maxLength": 150, "example": "Senior Backend Engineer" },
+          "description": { "type": "string", "minLength": 50, "maxLength": 20000, "example": "Build reliable payment services and mentor the engineering team." },
+          "location": { "type": "string", "maxLength": 100, "example": "Remote" },
+          "employmentType": { "$ref": "#/components/schemas/EmploymentType" },
+          "category": { "type": "string", "maxLength": 100, "example": "IT" },
+          "salaryMinimum": { "type": "integer", "minimum": 0, "maximum": 10000000, "example": 90000 },
+          "salaryMaximum": { "type": "integer", "minimum": 0, "maximum": 10000000, "description": "Must be greater than or equal to salaryMinimum", "example": 150000 }
+        }
+      },
+      "JobApplicationWriteRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["coverLetter"],
+        "properties": {
+          "coverLetter": { "type": "string", "minLength": 50, "maxLength": 5000, "example": "I have five years of experience building reliable backend services and working with product teams." },
+          "resume": { "type": "string", "format": "binary", "description": "Optional PDF, maximum 5 MiB" }
+        }
+      },
+      "JobApplicationStatusRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["status"],
+        "properties": {
+          "status": { "$ref": "#/components/schemas/EmployerManagedJobApplicationStatus" }
+        }
+      },
+      "InterviewWriteRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["scheduledAt", "durationMinutes", "timezone", "location"],
+        "properties": {
+          "scheduledAt": { "type": "string", "format": "date-time", "description": "Must be in the future", "example": "2026-11-02T03:00:00.000Z" },
+          "durationMinutes": { "type": "integer", "minimum": 15, "maximum": 480, "example": 60 },
+          "timezone": { "type": "string", "maxLength": 64, "example": "Asia/Bangkok" },
+          "location": { "type": "string", "maxLength": 255, "example": "https://meet.example/interview" },
+          "notes": { "type": ["string", "null"], "maxLength": 2000, "example": "Prepare to discuss one recent system design." }
+        }
+      },
+      "AdminMetric": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["value", "changePercent"],
+        "properties": {
+          "value": { "type": "integer", "minimum": 0, "example": 1240 },
+          "changePercent": { "type": ["number", "null"], "example": 12.5 }
+        }
+      },
+      "AdminDashboardStats": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["totalUsers", "totalEmployers", "totalJobseekers", "totalJobListings", "applicationsToday", "hiresThisMonth"],
+        "properties": {
+          "totalUsers": { "$ref": "#/components/schemas/AdminMetric" },
+          "totalEmployers": { "$ref": "#/components/schemas/AdminMetric" },
+          "totalJobseekers": { "$ref": "#/components/schemas/AdminMetric" },
+          "totalJobListings": { "$ref": "#/components/schemas/AdminMetric" },
+          "applicationsToday": { "$ref": "#/components/schemas/AdminMetric" },
+          "hiresThisMonth": { "$ref": "#/components/schemas/AdminMetric" }
+        }
+      },
+      "AdminUserDistribution": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["employers", "jobseekers"],
+        "properties": {
+          "employers": { "type": "integer", "minimum": 0, "example": 186 },
+          "jobseekers": { "type": "integer", "minimum": 0, "example": 1054 }
+        }
+      },
+      "AdminGrowthPoint": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["month", "newUsers", "newJobListings", "applications"],
+        "properties": {
+          "month": { "type": "string", "pattern": "^\\d{4}-\\d{2}$", "example": "2026-10" },
+          "newUsers": { "type": "integer", "minimum": 0, "example": 260 },
+          "newJobListings": { "type": "integer", "minimum": 0, "example": 74 },
+          "applications": { "type": "integer", "minimum": 0, "example": 510 }
+        }
+      },
+      "AdminActivity": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "description", "occurredAt"],
+        "properties": {
+          "type": { "$ref": "#/components/schemas/AdminActivityType" },
+          "description": { "type": "string", "example": "Job published: Senior Backend Engineer" },
+          "occurredAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "AdminUserSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "email", "role", "status", "createdAt"],
+        "properties": {
+          "id": { "type": "integer", "example": 3 },
+          "name": { "type": "string", "example": "Jane Candidate" },
+          "email": { "type": "string", "format": "email", "example": "jane@example.com" },
+          "role": { "$ref": "#/components/schemas/UserRole" },
+          "status": { "$ref": "#/components/schemas/AdminUserStatus" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "AdminDashboard": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["stats", "userDistribution", "growth", "recentActivity", "latestUsers", "generatedAt"],
+        "properties": {
+          "stats": { "$ref": "#/components/schemas/AdminDashboardStats" },
+          "userDistribution": { "$ref": "#/components/schemas/AdminUserDistribution" },
+          "growth": {
+            "type": "array",
+            "minItems": 6,
+            "maxItems": 6,
+            "items": { "$ref": "#/components/schemas/AdminGrowthPoint" }
+          },
+          "recentActivity": {
+            "type": "array",
+            "maxItems": 6,
+            "items": { "$ref": "#/components/schemas/AdminActivity" }
+          },
+          "latestUsers": {
+            "type": "array",
+            "maxItems": 5,
+            "items": { "$ref": "#/components/schemas/AdminUserSummary" }
+          },
+          "generatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "User": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "email", "role", "createdAt"],
+        "properties": {
+          "id": { "type": "integer", "example": 3 },
+          "name": { "type": "string", "example": "Jane Candidate" },
+          "email": { "type": "string", "format": "email", "example": "jane@example.com" },
+          "role": { "$ref": "#/components/schemas/UserRole" },
+          "createdAt": { "type": "string", "format": "date-time", "example": "2026-10-30T03:30:00.000000Z" }
+        }
+      },
+      "Salary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["minimum", "maximum", "currency"],
+        "properties": {
+          "minimum": { "type": "integer", "example": 90000 },
+          "maximum": { "type": "integer", "example": 150000 },
+          "currency": { "type": "string", "example": "THB" }
+        }
+      },
+      "JobListingSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title", "employerName", "location", "employmentType", "category", "salary", "publishedAt"],
+        "properties": {
+          "id": { "type": "integer", "example": 42 },
+          "title": { "type": "string", "example": "Senior Backend Engineer" },
+          "employerName": { "type": "string", "example": "Acme Technology" },
+          "location": { "type": "string", "example": "Remote" },
+          "employmentType": { "$ref": "#/components/schemas/EmploymentType" },
+          "category": { "type": "string", "example": "IT" },
+          "salary": { "$ref": "#/components/schemas/Salary" },
+          "publishedAt": { "type": ["string", "null"], "format": "date-time" }
+        }
+      },
+      "EmployerJobListingSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title", "location", "employmentType", "category", "salary", "status", "applicationsCount", "shortlistedCount", "publishedAt", "updatedAt"],
+        "properties": {
+          "id": { "type": "integer", "example": 42 },
+          "title": { "type": "string", "example": "Senior Backend Engineer" },
+          "location": { "type": "string", "example": "Remote" },
+          "employmentType": { "$ref": "#/components/schemas/EmploymentType" },
+          "category": { "type": "string", "example": "IT" },
+          "salary": { "$ref": "#/components/schemas/Salary" },
+          "status": { "$ref": "#/components/schemas/JobListingStatus" },
+          "applicationsCount": { "type": "integer", "minimum": 0, "example": 5 },
+          "shortlistedCount": { "type": "integer", "minimum": 0, "example": 2 },
+          "publishedAt": { "type": ["string", "null"], "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "JobListing": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "employerId", "employerName", "title", "description", "location", "employmentType", "category", "salary", "status", "publishedAt", "createdAt", "updatedAt"],
+        "properties": {
+          "id": { "type": "integer", "example": 42 },
+          "employerId": { "type": "integer", "example": 2 },
+          "employerName": { "type": "string", "example": "Acme Technology" },
+          "title": { "type": "string", "example": "Senior Backend Engineer" },
+          "description": { "type": "string", "example": "Build reliable payment services and mentor the engineering team." },
+          "location": { "type": "string", "example": "Remote" },
+          "employmentType": { "$ref": "#/components/schemas/EmploymentType" },
+          "category": { "type": "string", "example": "IT" },
+          "salary": { "$ref": "#/components/schemas/Salary" },
+          "status": { "$ref": "#/components/schemas/JobListingStatus" },
+          "publishedAt": { "type": ["string", "null"], "format": "date-time" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CompactJob": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title"],
+        "properties": {
+          "id": { "type": "integer", "example": 42 },
+          "title": { "type": "string", "example": "Senior Backend Engineer" }
+        }
+      },
+      "CompactPerson": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name"],
+        "properties": {
+          "id": { "type": "integer", "example": 3 },
+          "name": { "type": "string", "example": "Jane Candidate" }
+        }
+      },
+      "CompactCandidate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "email"],
+        "properties": {
+          "id": { "type": "integer", "example": 3 },
+          "name": { "type": "string", "example": "Jane Candidate" },
+          "email": { "type": "string", "format": "email", "example": "jane@example.com" }
+        }
+      },
+      "ResumeMetadata": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["available", "originalName", "size"],
+        "properties": {
+          "available": { "type": "boolean", "example": true },
+          "originalName": { "type": ["string", "null"], "example": "jane-resume.pdf" },
+          "size": { "type": ["integer", "null"], "example": 48231 }
+        }
+      },
+      "JobApplication": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "jobListing", "applicant", "coverLetter", "resume", "status", "statusChangedAt", "withdrawnAt", "appliedAt", "updatedAt"],
+        "properties": {
+          "id": { "type": "integer", "example": 73 },
+          "jobListing": { "$ref": "#/components/schemas/CompactJob" },
+          "applicant": { "$ref": "#/components/schemas/CompactCandidate" },
+          "coverLetter": { "type": "string" },
+          "resume": { "$ref": "#/components/schemas/ResumeMetadata" },
+          "status": { "$ref": "#/components/schemas/JobApplicationStatus" },
+          "statusChangedAt": { "type": "string", "format": "date-time" },
+          "withdrawnAt": { "type": ["string", "null"], "format": "date-time" },
+          "appliedAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Interview": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "jobApplicationId", "jobListing", "employer", "candidate", "scheduledAt", "endsAt", "durationMinutes", "timezone", "location", "notes", "status", "confirmedAt", "cancelledAt", "completedAt", "createdAt", "updatedAt"],
+        "properties": {
+          "id": { "type": "integer", "example": 18 },
+          "jobApplicationId": { "type": "integer", "example": 73 },
+          "jobListing": { "$ref": "#/components/schemas/CompactJob" },
+          "employer": { "$ref": "#/components/schemas/CompactPerson" },
+          "candidate": { "$ref": "#/components/schemas/CompactCandidate" },
+          "scheduledAt": { "type": "string", "format": "date-time" },
+          "endsAt": { "type": "string", "format": "date-time" },
+          "durationMinutes": { "type": "integer", "example": 60 },
+          "timezone": { "type": "string", "example": "Asia/Bangkok" },
+          "location": { "type": "string", "example": "https://meet.example/interview" },
+          "notes": { "type": ["string", "null"] },
+          "status": { "$ref": "#/components/schemas/InterviewStatus" },
+          "confirmedAt": { "type": ["string", "null"], "format": "date-time" },
+          "cancelledAt": { "type": ["string", "null"], "format": "date-time" },
+          "completedAt": { "type": ["string", "null"], "format": "date-time" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Pagination": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["currentPage", "perPage", "lastPage", "total"],
+        "properties": {
+          "currentPage": { "type": "integer", "minimum": 1 },
+          "perPage": { "type": "integer", "minimum": 1, "maximum": 50 },
+          "lastPage": { "type": "integer", "minimum": 1 },
+          "total": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "JobListingFacets": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["locations", "employmentTypes", "categories"],
+        "properties": {
+          "locations": { "type": "array", "items": { "type": "string" } },
+          "employmentTypes": { "type": "array", "items": { "$ref": "#/components/schemas/EmploymentType" } },
+          "categories": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "JobListingCounts": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["total", "draft", "published", "closed"],
+        "properties": {
+          "total": { "type": "integer", "minimum": 0 },
+          "draft": { "type": "integer", "minimum": 0 },
+          "published": { "type": "integer", "minimum": 0 },
+          "closed": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "JobApplicationCounts": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["total", "submitted", "reviewing", "shortlisted", "rejected", "hired", "withdrawn"],
+        "properties": {
+          "total": { "type": "integer", "minimum": 0 },
+          "submitted": { "type": "integer", "minimum": 0 },
+          "reviewing": { "type": "integer", "minimum": 0 },
+          "shortlisted": { "type": "integer", "minimum": 0 },
+          "rejected": { "type": "integer", "minimum": 0 },
+          "hired": { "type": "integer", "minimum": 0 },
+          "withdrawn": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "InterviewCounts": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["total", "scheduled", "confirmed", "cancelled", "completed"],
+        "properties": {
+          "total": { "type": "integer", "minimum": 0 },
+          "scheduled": { "type": "integer", "minimum": 0 },
+          "confirmed": { "type": "integer", "minimum": 0 },
+          "cancelled": { "type": "integer", "minimum": 0 },
+          "completed": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "UserEnvelope": {
+        "allOf": [
+          { "$ref": "#/components/schemas/SuccessEnvelope" },
+          { "type": "object", "required": ["data"], "properties": { "data": { "$ref": "#/components/schemas/User" } } }
+        ]
+      },
+      "AdminDashboardEnvelope": {
+        "allOf": [
+          { "$ref": "#/components/schemas/SuccessEnvelope" },
+          { "type": "object", "required": ["data"], "properties": { "data": { "$ref": "#/components/schemas/AdminDashboard" } } }
+        ]
+      },
+      "AdminUserCollectionEnvelope": {
+        "allOf": [
+          { "$ref": "#/components/schemas/SuccessEnvelope" },
+          {
+            "type": "object",
+            "required": ["data"],
+            "properties": {
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["items", "pagination"],
+                "properties": {
+                  "items": { "type": "array", "items": { "$ref": "#/components/schemas/AdminUserSummary" } },
+                  "pagination": { "$ref": "#/components/schemas/Pagination" }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "JobListingEnvelope": {
+        "allOf": [
+          { "$ref": "#/components/schemas/SuccessEnvelope" },
+          { "type": "object", "required": ["data"], "properties": { "data": { "$ref": "#/components/schemas/JobListing" } } }
+        ]
+      },
+      "SavedJobListingsEnvelope": {
+        "allOf": [
+          { "$ref": "#/components/schemas/SuccessEnvelope" },
+          {
+            "type": "object",
+            "required": ["data"],
+            "properties": {
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["jobListingIds"],
+                "properties": {
+                  "jobListingIds": {
+                    "type": "array",
+                    "items": { "type": "integer", "minimum": 1 }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "JobApplicationEnvelope": {
+        "allOf": [
+          { "$ref": "#/components/schemas/SuccessEnvelope" },
+          { "type": "object", "required": ["data"], "properties": { "data": { "$ref": "#/components/schemas/JobApplication" } } }
+        ]
+      },
+      "InterviewEnvelope": {
+        "allOf": [
+          { "$ref": "#/components/schemas/SuccessEnvelope" },
+          { "type": "object", "required": ["data"], "properties": { "data": { "$ref": "#/components/schemas/Interview" } } }
+        ]
+      },
+      "PublicJobListingCollectionEnvelope": {
+        "allOf": [
+          { "$ref": "#/components/schemas/SuccessEnvelope" },
+          {
+            "type": "object",
+            "required": ["data"],
+            "properties": {
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["items", "pagination", "facets"],
+                "properties": {
+                  "items": { "type": "array", "items": { "$ref": "#/components/schemas/JobListingSummary" } },
+                  "pagination": { "$ref": "#/components/schemas/Pagination" },
+                  "facets": { "$ref": "#/components/schemas/JobListingFacets" }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "EmployerJobListingCollectionEnvelope": {
+        "allOf": [
+          { "$ref": "#/components/schemas/SuccessEnvelope" },
+          {
+            "type": "object",
+            "required": ["data"],
+            "properties": {
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["items", "pagination", "counts"],
+                "properties": {
+                  "items": { "type": "array", "items": { "$ref": "#/components/schemas/EmployerJobListingSummary" } },
+                  "pagination": { "$ref": "#/components/schemas/Pagination" },
+                  "counts": { "$ref": "#/components/schemas/JobListingCounts" }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "JobApplicationCollectionEnvelope": {
+        "allOf": [
+          { "$ref": "#/components/schemas/SuccessEnvelope" },
+          {
+            "type": "object",
+            "required": ["data"],
+            "properties": {
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["items", "pagination", "counts"],
+                "properties": {
+                  "items": { "type": "array", "items": { "$ref": "#/components/schemas/JobApplication" } },
+                  "pagination": { "$ref": "#/components/schemas/Pagination" },
+                  "counts": { "$ref": "#/components/schemas/JobApplicationCounts" }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "InterviewCollectionEnvelope": {
+        "allOf": [
+          { "$ref": "#/components/schemas/SuccessEnvelope" },
+          {
+            "type": "object",
+            "required": ["data"],
+            "properties": {
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["items", "pagination", "counts"],
+                "properties": {
+                  "items": { "type": "array", "items": { "$ref": "#/components/schemas/Interview" } },
+                  "pagination": { "$ref": "#/components/schemas/Pagination" },
+                  "counts": { "$ref": "#/components/schemas/InterviewCounts" }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "Notification": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "type", "title", "message", "url", "readAt", "createdAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "example": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d" },
+          "type": { "type": "string", "example": "job_application_status_changed" },
+          "title": { "type": "string", "example": "Application Reviewed" },
+          "message": { "type": "string", "example": "Your application was updated to reviewing." },
+          "url": { "type": "string", "example": "/jobseeker/applications" },
+          "readAt": { "type": ["string", "null"], "format": "date-time" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "AdminUserEnvelope": {
+        "allOf": [
+          { "$ref": "#/components/schemas/SuccessEnvelope" },
+          {
+            "type": "object",
+            "required": ["data"],
+            "properties": {
+              "data": { "$ref": "#/components/schemas/AdminUserSummary" }
+            }
+          }
+        ]
+      },
+      "NotificationEnvelope": {
+        "allOf": [
+          { "$ref": "#/components/schemas/SuccessEnvelope" },
+          {
+            "type": "object",
+            "required": ["data"],
+            "properties": {
+              "data": { "$ref": "#/components/schemas/Notification" }
+            }
+          }
+        ]
+      },
+      "NotificationCollectionEnvelope": {
+        "allOf": [
+          { "$ref": "#/components/schemas/SuccessEnvelope" },
+          {
+            "type": "object",
+            "required": ["data"],
+            "properties": {
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["items", "unreadCount", "pagination"],
+                "properties": {
+                  "items": { "type": "array", "items": { "$ref": "#/components/schemas/Notification" } },
+                  "unreadCount": { "type": "integer", "minimum": 0 },
+                  "pagination": { "$ref": "#/components/schemas/Pagination" }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "SuccessEnvelope": {
+        "type": "object",
+        "required": ["success", "data", "message", "errors"],
+        "properties": {
+          "success": { "type": "boolean", "const": true },
+          "data": {},
+          "message": { "type": "string" },
+          "errors": { "type": "null" }
+        }
+      },
+      "EmptyEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["success", "data", "message", "errors"],
+        "properties": {
+          "success": { "type": "boolean", "const": true },
+          "data": { "type": "null" },
+          "message": { "type": "string", "example": "Signed out successfully." },
+          "errors": { "type": "null" }
+        }
+      },
+      "ErrorEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["success", "data", "message", "errors"],
+        "properties": {
+          "success": { "type": "boolean", "const": false },
+          "data": { "type": "null" },
+          "message": { "type": "string", "example": "The given data was invalid." },
+          "errors": {
+            "type": ["object", "null"],
+            "additionalProperties": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "example": { "email": ["The email field is required."] }
+          }
+        }
+      }
+    }
+  }
+}

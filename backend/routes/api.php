@@ -8,8 +8,11 @@ use App\Http\Controllers\Api\InterviewController;
 use App\Http\Controllers\Api\JobApplicationController;
 use App\Http\Controllers\Api\JobListingController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\OpenApiController;
 use App\Http\Controllers\Api\SavedJobListingController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/openapi.json', OpenApiController::class);
 
 Route::get('/admin/dashboard', AdminDashboardController::class)
     ->middleware('auth:sanctum');
