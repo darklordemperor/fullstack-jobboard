@@ -19,6 +19,26 @@ services:
     networks:
       - job-board
 
+  queue-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: php artisan queue:work redis --sleep=1 --tries=3 --timeout=90
+    volumes:
+      - ./backend:/var/www/html
+    env_file:
+      - ./backend/.env.docker
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      mailpit:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - job-board
+
   backend-test:
     profiles:
       - test

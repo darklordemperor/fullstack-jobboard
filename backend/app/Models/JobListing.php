@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'employer_id',
@@ -34,6 +35,14 @@ class JobListing extends Model
     public function employer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'employer_id');
+    }
+
+    /**
+     * @return HasMany<JobApplication, $this>
+     */
+    public function applications(): HasMany
+    {
+        return $this->hasMany(JobApplication::class);
     }
 
     /**

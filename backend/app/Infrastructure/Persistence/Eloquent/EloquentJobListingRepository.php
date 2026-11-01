@@ -76,6 +76,10 @@ final class EloquentJobListingRepository implements JobListingRepository
     ): JobListingPage {
         $paginator = JobListingModel::query()
             ->with('employer:id,name')
+            ->withCount([
+                'applications',
+                'applications as shortlisted_applications_count' => fn (Builder $query) => $query->where('status', 'shortlisted'),
+            ])
             ->where('employer_id', $employerId)
             ->when($status, fn (Builder $query, JobListingStatus $status) => $query->where('status', $status->value))
             ->when($search !== null && $search !== '', function (Builder $query) use ($search): void {

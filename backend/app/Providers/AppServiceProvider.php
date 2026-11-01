@@ -4,12 +4,18 @@ namespace App\Providers;
 
 use App\Application\Auth\Contracts\AuthSession;
 use App\Application\Auth\Contracts\PasswordHasher;
+use App\Application\JobApplications\Contracts\JobApplicationNotifier;
+use App\Application\JobApplications\Contracts\ResumeStorage;
 use App\Domain\Auth\Repositories\UserRepository;
+use App\Domain\JobApplications\Repositories\JobApplicationRepository;
 use App\Domain\JobListings\Repositories\JobListingRepository;
 use App\Infrastructure\Auth\LaravelAuthSession;
+use App\Infrastructure\Notifications\LaravelJobApplicationNotifier;
+use App\Infrastructure\Persistence\Eloquent\EloquentJobApplicationRepository;
 use App\Infrastructure\Persistence\Eloquent\EloquentJobListingRepository;
 use App\Infrastructure\Persistence\Eloquent\EloquentUserRepository;
 use App\Infrastructure\Security\LaravelPasswordHasher;
+use App\Infrastructure\Storage\LaravelResumeStorage;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -23,8 +29,11 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(UserRepository::class, EloquentUserRepository::class);
+        $this->app->bind(JobApplicationRepository::class, EloquentJobApplicationRepository::class);
         $this->app->bind(JobListingRepository::class, EloquentJobListingRepository::class);
         $this->app->bind(PasswordHasher::class, LaravelPasswordHasher::class);
+        $this->app->bind(ResumeStorage::class, LaravelResumeStorage::class);
+        $this->app->bind(JobApplicationNotifier::class, LaravelJobApplicationNotifier::class);
         $this->app->scoped(AuthSession::class, LaravelAuthSession::class);
     }
 

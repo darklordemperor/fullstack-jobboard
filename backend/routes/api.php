@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Api\Auth\RegisteredUserController;
 use App\Http\Controllers\Api\EmployerJobListingController;
+use App\Http\Controllers\Api\JobApplicationController;
 use App\Http\Controllers\Api\JobListingController;
 use Illuminate\Support\Facades\Route;
 
@@ -25,12 +26,29 @@ Route::get('/me', [AuthenticatedSessionController::class, 'show'])
 Route::get('/job-listings', [JobListingController::class, 'index']);
 Route::get('/job-listings/{jobListing}', [JobListingController::class, 'show'])
     ->whereNumber('jobListing');
+Route::post('/job-listings/{jobListing}/applications', [JobApplicationController::class, 'store'])
+    ->middleware('auth:sanctum')
+    ->whereNumber('jobListing');
+Route::get('/job-applications/{jobApplication}/resume', [JobApplicationController::class, 'resume'])
+    ->middleware('auth:sanctum')
+    ->whereNumber('jobApplication');
+
+Route::prefix('jobseeker/applications')->middleware('auth:sanctum')->group(function (): void {
+    Route::get('/', [JobApplicationController::class, 'jobseekerIndex']);
+    Route::patch('/{jobApplication}/withdraw', [JobApplicationController::class, 'withdraw'])
+        ->whereNumber('jobApplication');
+});
 
 Route::prefix('employer/job-listings')->middleware('auth:sanctum')->group(function (): void {
     Route::get('/', [EmployerJobListingController::class, 'index']);
     Route::get('/{jobListing}', [EmployerJobListingController::class, 'show'])->whereNumber('jobListing');
+    Route::get('/{jobListing}/applications', [JobApplicationController::class, 'index'])->whereNumber('jobListing');
     Route::post('/', [EmployerJobListingController::class, 'store']);
     Route::put('/{jobListing}', [EmployerJobListingController::class, 'update'])->whereNumber('jobListing');
     Route::post('/{jobListing}/publish', [EmployerJobListingController::class, 'publish'])->whereNumber('jobListing');
     Route::post('/{jobListing}/close', [EmployerJobListingController::class, 'close'])->whereNumber('jobListing');
 });
+
+Route::patch('/employer/applications/{jobApplication}/status', [JobApplicationController::class, 'updateStatus'])
+    ->middleware('auth:sanctum')
+    ->whereNumber('jobApplication');

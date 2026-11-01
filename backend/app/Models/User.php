@@ -27,6 +27,14 @@ class User extends Authenticatable
         return $this->hasMany(JobListing::class, 'employer_id');
     }
 
+    /**
+     * @return HasMany<JobApplication, $this>
+     */
+    public function jobApplications(): HasMany
+    {
+        return $this->hasMany(JobApplication::class, 'applicant_id');
+    }
+
     public function isSuspended(): bool
     {
         return $this->suspended_at !== null;
