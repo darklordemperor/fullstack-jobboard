@@ -101,7 +101,7 @@ test('update admin user use case updates user and returns summary', function () 
 
         public function get(): AdminDashboard
         {
-            throw new BadMethodCallException();
+            throw new BadMethodCallException;
         }
 
         public function searchUsers(
@@ -111,7 +111,7 @@ test('update admin user use case updates user and returns summary', function () 
             int $page,
             int $perPage,
         ): AdminUserPage {
-            throw new BadMethodCallException();
+            throw new BadMethodCallException;
         }
 
         public function findUserById(int $userId): ?AdminUserSummary

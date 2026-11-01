@@ -11,6 +11,6 @@ final class LikeQuery
 
     public static function pattern(string $value): string
     {
-        return '%' . self::escape($value) . '%';
+        return '%'.self::escape($value).'%';
     }
 }
