@@ -6,8 +6,15 @@ use App\Http\Controllers\Api\EmployerJobListingController;
 use App\Http\Controllers\Api\InterviewController;
 use App\Http\Controllers\Api\JobApplicationController;
 use App\Http\Controllers\Api\JobListingController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\SavedJobListingController;
 use Illuminate\Support\Facades\Route;
+
+Route::prefix('notifications')->middleware('auth:sanctum')->group(function (): void {
+    Route::get('/', [NotificationController::class, 'index']);
+    Route::patch('/{notification}/read', [NotificationController::class, 'markAsRead']);
+    Route::post('/read-all', [NotificationController::class, 'markAllAsRead']);
+});
 
 Route::prefix('auth')->group(function (): void {
     Route::post('/login', [AuthenticatedSessionController::class, 'store'])
