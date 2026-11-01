@@ -6,9 +6,9 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { useAuth } from "@/hooks/useAuth";
-import { getErrorMessage, getValidationErrors } from "@/lib/axios";
-import type { UserRole } from "@/types/api.types";
+import { AuthRequestError } from "@/features/auth/application/errors/AuthRequestError";
+import { resolvePostAuthRedirect } from "@/features/auth/domain/navigation/roleNavigation";
+import { useAuth } from "@/features/auth/presentation/hooks/useAuth";
 
 const loginSchema = z.object({
   email: z.string().trim().email("Enter a valid email address."),
@@ -16,12 +16,6 @@ const loginSchema = z.object({
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
-
-const roleRedirects: Record<UserRole, string> = {
-  admin: "/admin/dashboard",
-  employer: "/employer/jobs",
-  jobseeker: "/jobseeker/browse",
-};
 
 export default function LoginPage() {
   const router = useRouter();
@@ -46,14 +40,13 @@ export default function LoginPage() {
 
     try {
       const user = await login(values.email, values.password);
-
       const nextUrl = new URLSearchParams(window.location.search).get("next");
-      const redirectTo = nextUrl ?? roleRedirects[user.role];
+      const redirectTo = resolvePostAuthRedirect(user.role, nextUrl);
 
       router.replace(redirectTo);
       router.refresh();
     } catch (error) {
-      const validationErrors = getValidationErrors(error);
+      const validationErrors = error instanceof AuthRequestError ? error.fieldErrors : {};
 
       Object.entries(validationErrors).forEach(([field, messages]) => {
         if (field === "email" || field === "password") {
@@ -61,7 +54,11 @@ export default function LoginPage() {
         }
       });
 
-      setFormError(getErrorMessage(error, "Unable to sign in with those credentials."));
+      setFormError(
+        error instanceof AuthRequestError
+          ? error.message
+          : "Unable to sign in with those credentials.",
+      );
     }
   });
 
