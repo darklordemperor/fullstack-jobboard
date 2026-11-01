@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AdminDashboardController;
 use App\Http\Controllers\Api\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Api\Auth\RegisteredUserController;
 use App\Http\Controllers\Api\EmployerJobListingController;
@@ -9,6 +10,14 @@ use App\Http\Controllers\Api\JobListingController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\SavedJobListingController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/admin/dashboard', AdminDashboardController::class)
+    ->middleware('auth:sanctum');
+Route::get('/admin/users', [AdminDashboardController::class, 'users'])
+    ->middleware('auth:sanctum');
+Route::patch('/admin/users/{user}', [AdminDashboardController::class, 'updateUser'])
+    ->middleware('auth:sanctum')
+    ->whereNumber('user');
 
 Route::prefix('notifications')->middleware('auth:sanctum')->group(function (): void {
     Route::get('/', [NotificationController::class, 'index']);
