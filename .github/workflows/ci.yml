@@ -105,6 +105,9 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - name: Install backend dependencies
+        run: docker compose --profile test run --rm --no-deps backend-test composer install --no-interaction --prefer-dist --no-progress
+
       - name: Run isolated Playwright journey
         run: bash scripts/test-e2e.sh
 
