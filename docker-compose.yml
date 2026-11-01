@@ -19,6 +19,20 @@ services:
     networks:
       - job-board
 
+  backend-test:
+    profiles:
+      - test
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: vendor/bin/pest --compact
+    volumes:
+      - ./backend:/var/www/html
+    env_file:
+      - ./backend/.env.testing
+    networks:
+      - job-board
+
   nextjs-app:
     build:
       context: ./frontend
