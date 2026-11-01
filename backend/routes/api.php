@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\EmployerJobListingController;
 use App\Http\Controllers\Api\InterviewController;
 use App\Http\Controllers\Api\JobApplicationController;
 use App\Http\Controllers\Api\JobListingController;
+use App\Http\Controllers\Api\SavedJobListingController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function (): void {
@@ -38,6 +39,14 @@ Route::prefix('jobseeker/applications')->middleware('auth:sanctum')->group(funct
     Route::get('/', [JobApplicationController::class, 'jobseekerIndex']);
     Route::patch('/{jobApplication}/withdraw', [JobApplicationController::class, 'withdraw'])
         ->whereNumber('jobApplication');
+});
+
+Route::prefix('jobseeker/saved-jobs')->middleware('auth:sanctum')->group(function (): void {
+    Route::get('/', [SavedJobListingController::class, 'index']);
+    Route::post('/{jobListing}', [SavedJobListingController::class, 'store'])
+        ->whereNumber('jobListing');
+    Route::delete('/{jobListing}', [SavedJobListingController::class, 'destroy'])
+        ->whereNumber('jobListing');
 });
 
 Route::prefix('employer/job-listings')->middleware('auth:sanctum')->group(function (): void {

@@ -195,3 +195,79 @@ test('jobseeker cannot create a listing and salary range is validated', function
     ]))->assertUnprocessable()
         ->assertJsonValidationErrors(['salaryMaximum']);
 });
+
+test('jobseeker can list save and remove published job listings while non-jobseekers and non-published listings are rejected', function () {
+    $employer = User::factory()->create(['role' => 'employer']);
+    $jobseeker = User::factory()->create(['role' => 'jobseeker']);
+    $otherJobseeker = User::factory()->create(['role' => 'jobseeker']);
+
+    $publishedFirst = JobListing::factory()->for($employer, 'employer')->published()->create();
+    $publishedSecond = JobListing::factory()->for($employer, 'employer')->published()->create();
+    $draft = JobListing::factory()->for($employer, 'employer')->create();
+
+    $this->getJson('/api/v1/jobseeker/saved-jobs')->assertUnauthorized();
+
+    Sanctum::actingAs($employer);
+    $this->getJson('/api/v1/jobseeker/saved-jobs')->assertForbidden();
+    $this->postJson("/api/v1/jobseeker/saved-jobs/{$publishedFirst->id}")->assertForbidden();
+    $this->deleteJson("/api/v1/jobseeker/saved-jobs/{$publishedFirst->id}")->assertForbidden();
+
+    Sanctum::actingAs($jobseeker);
+
+    $this->getJson('/api/v1/jobseeker/saved-jobs')
+        ->assertSuccessful()
+        ->assertJsonPath('data.jobListingIds', []);
+
+    $this->postJson("/api/v1/jobseeker/saved-jobs/{$publishedFirst->id}")
+        ->assertSuccessful()
+        ->assertJsonPath('data.jobListingIds', [$publishedFirst->id]);
+
+    $this->postJson("/api/v1/jobseeker/saved-jobs/{$publishedFirst->id}")
+        ->assertSuccessful()
+        ->assertJsonPath('data.jobListingIds', [$publishedFirst->id]);
+
+    $this->postJson("/api/v1/jobseeker/saved-jobs/{$publishedSecond->id}")
+        ->assertSuccessful()
+        ->assertJsonPath('data.jobListingIds', [$publishedSecond->id, $publishedFirst->id]);
+
+    $this->postJson("/api/v1/jobseeker/saved-jobs/{$draft->id}")
+        ->assertNotFound()
+        ->assertJsonPath('success', false);
+
+    Sanctum::actingAs($otherJobseeker);
+    $this->getJson('/api/v1/jobseeker/saved-jobs')
+        ->assertSuccessful()
+        ->assertJsonPath('data.jobListingIds', []);
+
+    Sanctum::actingAs($jobseeker);
+    $this->deleteJson("/api/v1/jobseeker/saved-jobs/{$publishedFirst->id}")
+        ->assertSuccessful()
+        ->assertJsonPath('data.jobListingIds', [$publishedSecond->id]);
+});
+
+test('public search supports savedOnly filter for authenticated jobseekers and rejects guests or non-jobseekers', function () {
+    $employer = User::factory()->create(['role' => 'employer']);
+    $jobseeker = User::factory()->create(['role' => 'jobseeker']);
+
+    $savedRole = JobListing::factory()->for($employer, 'employer')->published()->create([
+        'title' => 'Saved Platform Role',
+    ]);
+    JobListing::factory()->for($employer, 'employer')->published()->create([
+        'title' => 'Unsaved Frontend Role',
+    ]);
+
+    $this->getJson('/api/v1/job-listings?savedOnly=true')->assertUnauthorized();
+
+    Sanctum::actingAs($employer);
+    $this->getJson('/api/v1/job-listings?savedOnly=true')->assertForbidden();
+
+    Sanctum::actingAs($jobseeker);
+    $this->postJson("/api/v1/jobseeker/saved-jobs/{$savedRole->id}")->assertSuccessful();
+
+    $this->getJson('/api/v1/job-listings?savedOnly=true&perPage=10')
+        ->assertSuccessful()
+        ->assertJsonPath('data.pagination.total', 1)
+        ->assertJsonCount(1, 'data.items')
+        ->assertJsonPath('data.items.0.id', $savedRole->id)
+        ->assertJsonPath('data.items.0.title', 'Saved Platform Role');
+});

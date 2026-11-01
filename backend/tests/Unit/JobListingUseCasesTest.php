@@ -8,10 +8,14 @@ use App\Application\JobListings\Exceptions\JobListingAccessDenied;
 use App\Application\JobListings\Exceptions\JobListingNotFound;
 use App\Application\JobListings\UseCases\CreateJobListing;
 use App\Application\JobListings\UseCases\ListEmployerJobListings;
+use App\Application\JobListings\UseCases\ListSavedJobListingIds;
 use App\Application\JobListings\UseCases\PublishJobListing;
+use App\Application\JobListings\UseCases\RemoveSavedJobListing;
+use App\Application\JobListings\UseCases\SaveJobListing;
 use App\Domain\JobListings\Enums\EmploymentType;
 use App\Domain\JobListings\Enums\JobListingStatus;
 use Tests\Fakes\FakeJobListingRepository;
+use Tests\Fakes\FakeSavedJobListingRepository;
 
 function jobListingData(): JobListingData
 {
@@ -83,4 +87,32 @@ test('list employer job listings scopes results and returns lifecycle counts', f
 
     expect($filtered->page->items)->toHaveCount(1)
         ->and($filtered->page->items[0]->title)->toBe('Backend Engineer');
+});
+
+test('jobseeker can save list and remove published job listings', function () {
+    $jobListings = new FakeJobListingRepository;
+    $savedJobListings = new FakeSavedJobListingRepository;
+
+    $draft = (new CreateJobListing($jobListings))->execute(7, jobListingData());
+    $published = (new PublishJobListing($jobListings))->execute($draft->id, 7);
+
+    $idsAfterSave = (new SaveJobListing($jobListings, $savedJobListings))->execute(42, $published->id);
+    $listedIds = (new ListSavedJobListingIds($savedJobListings))->execute(42);
+    $idsAfterRemove = (new RemoveSavedJobListing($savedJobListings))->execute(42, $published->id);
+
+    expect($idsAfterSave)->toBe([$published->id])
+        ->and($listedIds)->toBe([$published->id])
+        ->and($idsAfterRemove)->toBe([]);
+});
+
+test('save job listing rejects non-published or missing job listings', function () {
+    $jobListings = new FakeJobListingRepository;
+    $savedJobListings = new FakeSavedJobListingRepository;
+    $draft = (new CreateJobListing($jobListings))->execute(7, jobListingData());
+
+    expect(fn () => (new SaveJobListing($jobListings, $savedJobListings))->execute(42, $draft->id))
+        ->toThrow(JobListingNotFound::class);
+
+    expect(fn () => (new SaveJobListing($jobListings, $savedJobListings))->execute(42, 999))
+        ->toThrow(JobListingNotFound::class);
 });
