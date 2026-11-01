@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "generate:api-types": "openapi-typescript ../backend/resources/openapi.json -o src/infrastructure/http/generated/openapi.ts",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
