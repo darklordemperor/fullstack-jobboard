@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources;
 
+use App\Domain\Auth\Entities\User;
+use DateTimeZone;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -14,12 +16,17 @@ class UserResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        /** @var User $user */
+        $user = $this->resource;
+
         return [
-            'id' => $this->id,
-            'name' => $this->name,
-            'email' => $this->email,
-            'role' => $this->role,
-            'createdAt' => $this->created_at?->toISOString(),
+            'id' => $user->id,
+            'name' => $user->name->value,
+            'email' => $user->email->value,
+            'role' => $user->role->value,
+            'createdAt' => $user->createdAt
+                ->setTimezone(new DateTimeZone('UTC'))
+                ->format('Y-m-d\TH:i:s.u\Z'),
         ];
     }
 }

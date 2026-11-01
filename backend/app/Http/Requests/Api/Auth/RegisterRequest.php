@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api\Auth;
 
+use App\Domain\Auth\Enums\UserRole;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -28,7 +29,10 @@ class RegisterRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'confirmed', Password::defaults()],
-            'role' => ['sometimes', 'string', Rule::in(['employer', 'jobseeker'])],
+            'role' => ['sometimes', 'string', Rule::in([
+                UserRole::Employer->value,
+                UserRole::Jobseeker->value,
+            ])],
         ];
     }
 }
